@@ -104,9 +104,9 @@ type Color
 
 {-| Create an empty dictionary.
 -}
-empty : Dict k v
-empty =
-    Leaf
+empty : Sorter k -> Dict k v
+empty sorter =
+    Leaf sorter
 
 
 {-| Determine if a dictionary is empty.
@@ -114,7 +114,12 @@ isEmpty empty == True
 -}
 isEmpty : Dict k v -> Bool
 isEmpty dict =
-    dict == empty
+    case dict of
+        Leaf _ ->
+            True
+
+        Node _ _ _ _ _ _ ->
+            False
 
 
 {-| Create a dictionary with one key-value pair.
@@ -122,7 +127,7 @@ isEmpty dict =
 singleton : Sorter k -> k -> v -> Dict k v
 singleton sorter key value =
     -- Root is always black
-    Node sorter Black key value Leaf Leaf
+    Node sorter Black key value (Leaf sorter) (Leaf sorter)
 
 
 {-| Determine the number of key-value pairs in the dictionary.
@@ -201,7 +206,7 @@ insertHelp key value dict =
         Leaf sorter ->
             -- New nodes are always red. If it violates the rules, it will be fixed
             -- when balancing.
-            Node sorter Red key value Leaf Leaf
+            Node sorter Red key value (Leaf sorter) (Leaf sorter)
 
         Node sorter nColor nKey nValue nLeft nRight ->
             case Sort.toOrder sorter key nKey of
@@ -212,7 +217,7 @@ insertHelp key value dict =
                     balance sorter nColor nKey nValue nLeft (insertHelp key value nRight)
 
                 EQ ->
-                    Node nColor nKey value nLeft nRight
+                    Node sorter nColor nKey value nLeft nRight
 
 
 balance : Sorter k -> Color -> k -> v -> Dict k v -> Dict k v -> Dict k v
@@ -226,11 +231,11 @@ balance sorter color key value left right =
                         Red
                         key
                         value
-                        (Node Black lK lV lLeft lRight)
-                        (Node Black rK rV rLeft rRight)
+                        (Node sorter Black lK lV lLeft lRight)
+                        (Node sorter Black rK rV rLeft rRight)
 
                 _ ->
-                    Node sorter color rK rV (Node Red key value left rLeft) rRight
+                    Node sorter color rK rV (Node sorter Red key value left rLeft) rRight
 
         _ ->
             case left of
@@ -240,11 +245,11 @@ balance sorter color key value left right =
                         Red
                         lK
                         lV
-                        (Node Black llK llV llLeft llRight)
-                        (Node Black key value lRight right)
+                        (Node sorter Black llK llV llLeft llRight)
+                        (Node sorter Black key value lRight right)
 
                 _ ->
-                    Node color key value left right
+                    Node sorter color key value left right
 
 
 {-| Remove a key-value pair from a dictionary. If the key is not found,
@@ -273,30 +278,31 @@ removeHelp targetKey dict =
             leaf
 
         Node sorter color key value left right ->
-            if targetKey < key then
-                case left of
-                    Node _ Black _ _ lLeft _ ->
-                        case lLeft of
-                            Node sorter Red _ _ _ _ ->
-                                Node color key value (removeHelp targetKey left) right
+            case Sort.toOrder sorter targetKey key of
+                LT ->
+                    case left of
+                        Node _ Black _ _ lLeft _ ->
+                            case lLeft of
+                                Node _ Red _ _ _ _ ->
+                                    Node sorter color key value (removeHelp targetKey left) right
 
-                            _ ->
-                                case moveRedLeft dict of
-                                    Node sorter color key value left right ->
-                                        balance sorter color key value (removeHelp targetKey left) right
+                                _ ->
+                                    case moveRedLeft dict of
+                                        Node _ movedColor movedKey movedValue movedLeft movedRight ->
+                                            balance sorter movedColor movedKey movedValue (removeHelp targetKey movedLeft) movedRight
 
-                                    (Leaf _) as leaf ->
-                                        leaf
+                                        (Leaf _) as leaf ->
+                                            leaf
 
-                    _ ->
-                        Node sorter color key value (removeHelp targetKey left) right
+                        _ ->
+                            Node sorter color key value (removeHelp targetKey left) right
 
-            else
-                removeHelpEQGT sorter targetKey (removeHelpPrepEQGT targetKey dict color key value left right)
+                _ ->
+                    removeHelpEQGT targetKey (removeHelpPrepEQGT targetKey dict color key value left right)
 
 
-removeHelpPrepEQGT : Sorter k -> k -> Dict k v -> Color -> k -> v -> Dict k v -> Dict k v -> Dict k v
-removeHelpPrepEQGT sorter targetKey dict color key value left right =
+removeHelpPrepEQGT : k -> Dict k v -> Color -> k -> v -> Dict k v -> Dict k v -> Dict k v
+removeHelpPrepEQGT targetKey dict color key value left right =
     case left of
         Node sorter Red lK lV lLeft lRight ->
             Node
@@ -305,14 +311,14 @@ removeHelpPrepEQGT sorter targetKey dict color key value left right =
                 lK
                 lV
                 lLeft
-                (Node Red key value lRight right)
+                (Node sorter Red key value lRight right)
 
         _ ->
             case right of
-                Node sorter Black _ _ (Node _ Black _ _ _ _) _ ->
+                Node _ Black _ _ (Node _ Black _ _ _ _) _ ->
                     moveRedRight dict
 
-                Node sorter Black _ _ (Leaf _) _ ->
+                Node _ Black _ _ (Leaf _) _ ->
                     moveRedRight dict
 
                 _ ->
@@ -363,14 +369,17 @@ removeMin dict =
 
                         _ ->
                             case moveRedLeft dict of
-                                Node _ color key value left right ->
-                                    balance sorter color key value (removeMin left) right
+                                Node _ movedColor movedKey movedValue movedLeft movedRight ->
+                                    balance sorter movedColor movedKey movedValue (removeMin movedLeft) movedRight
 
                                 (Leaf _) as leaf ->
                                     leaf
 
                 _ ->
                     Node sorter color key value (removeMin left) right
+
+        Node _ _ _ _ ((Leaf _) as leaf) _ ->
+            leaf
 
         (Leaf _) as leaf ->
             leaf
@@ -422,7 +431,7 @@ moveRedRight dict =
                 lK
                 lV
                 (Node sorter Black llK llV llLeft llRight)
-                (Node sorter Black k v lRight (Node Red rK rV rLeft rRight))
+                (Node sorter Black k v lRight (Node sorter Red rK rV rLeft rRight))
 
         Node sorter clr k v (Node _ lClr lK lV lLeft lRight) (Node _ rClr rK rV rLeft rRight) ->
             case clr of
@@ -491,7 +500,7 @@ filter predicate dict =
             else
                 list
     in
-    fromSortedList True (foldr helper [] dict)
+    fromSortedList (getSorter dict) True (foldr helper [] dict)
 
 
 {-| Fold over the key-value pairs in a dictionary, in order from lowest
@@ -534,34 +543,40 @@ partition predicate dict =
             else
                 ( trues, ( key, value ) :: falses )
 
-        ( trues, falses ) =
+        ( finalTrues, finalFalses ) =
             foldr helper ( [], [] ) dict
+
+        sorter =
+            getSorter dict
     in
-    ( fromSortedList True trues, fromSortedList True falses )
+    ( fromSortedList sorter True finalTrues, fromSortedList sorter True finalFalses )
 
 
 
 -- COMBINE
 
 
-{-| Combine two dictionaries. If there is a collision, preference is given
-to the first dictionary.
+{-| Combine two dictionaries using the `preferred` dictionary's `Sorter`.
+
+If there is a collision, preference is given
+the `preferred` dictionary.
+
 -}
-union : Dict k v -> Dict k v -> Dict k v
-union left right =
-    case ( left, right ) of
+union : { preferred : Dict k v, replaced : Dict k v } -> Dict k v
+union { preferred, replaced } =
+    case ( preferred, replaced ) of
         ( _, Leaf _ ) ->
-            left
+            preferred
 
         ( Leaf _, _ ) ->
-            right
+            replaced
 
-        _ ->
+        ( Node sorter _ _ _ _ _, _ ) ->
             let
                 ( lt, gt ) =
-                    foldl unionAccumulator ( [], toList right ) left
+                    foldl (unionAccumulator sorter) ( [], toList replaced ) preferred
             in
-            fromSortedList False (List.foldl (\e acc -> e :: acc) lt gt)
+            fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
 
 
 unionAccumulator : Sorter k -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
@@ -576,86 +591,117 @@ unionAccumulator sorter lKey lVal ( result, rList ) =
                     ( ( lKey, lVal ) :: result, rList )
 
                 GT ->
-                    unionAccumulator lKey lVal ( ( rKey, rVal ) :: result, rRest )
+                    unionAccumulator sorter lKey lVal ( ( rKey, rVal ) :: result, rRest )
 
                 EQ ->
                     ( ( lKey, lVal ) :: result, rRest )
 
 
-{-| Keep a key-value pair when its key appears in the second dictionary.
-Preference is given to values in the first dictionary.
+{-| Keep a key-value pair when its key appears in the both the `preferred` and
+in the `other` dictionary.
+
+Preference for values and `Sorter` is given to values in the `preferred` dictionary.
+
 -}
-intersect : Dict k v -> Dict k v -> Dict k v
-intersect left right =
-    case ( getRange left, getRange right ) of
+intersect : { preferred : Dict k v, other : Dict k v } -> Dict k v
+intersect { preferred, other } =
+    let
+        sorter =
+            getSorter preferred
+    in
+    case ( getRange preferred, getRange other ) of
         ( _, Nothing ) ->
-            empty
+            Leaf sorter
 
         ( Nothing, _ ) ->
-            empty
+            Leaf sorter
 
         ( Just ( lMin, lMax ), Just ( rMin, rMax ) ) ->
-            if lMax < rMin || rMax < lMin then
-                -- disjoint ranges
-                empty
+            case Sort.toOrder sorter lMax rMin of
+                LT ->
+                    -- disjoint ranges
+                    Leaf sorter
 
-            else
-                fromSortedList False
-                    (Tuple.first (foldl intersectAccumulator ( [], toList right ) left))
+                _ ->
+                    case Sort.toOrder sorter rMax lMin of
+                        LT ->
+                            -- disjoint ranges
+                            Leaf sorter
+
+                        _ ->
+                            fromSortedList sorter
+                                False
+                                (Tuple.first (foldl (intersectAccumulator sorter) ( [], toList other ) preferred))
 
 
-intersectAccumulator : k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
-intersectAccumulator lKey lVal (( result, rList ) as return) =
+intersectAccumulator : Sorter k -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
+intersectAccumulator sorter lKey lVal (( result, rList ) as return) =
     case rList of
         [] ->
             return
 
         ( rKey, rVal ) :: rRest ->
-            case compare lKey rKey of
+            case Sort.toOrder sorter lKey rKey of
                 LT ->
                     return
 
                 GT ->
-                    intersectAccumulator lKey lVal ( result, rRest )
+                    intersectAccumulator sorter lKey lVal ( result, rRest )
 
                 EQ ->
                     ( ( lKey, lVal ) :: result, rRest )
 
 
-{-| Keep a key-value pair when its key does not appear in the second dictionary.
+{-| Keep a key-value pair when its key appears in the `original` dictionary
+but not in the `other` dictionary.
+
+The `original` dictionary's `Sorter` will be used.
+
 -}
-diff : Dict k v -> Dict k v -> Dict k v
-diff left right =
-    case ( getRange left, getRange right ) of
+diff : { original : Dict k v, other : Dict k v } -> Dict k v
+diff { original, other } =
+    let
+        sorter =
+            getSorter original
+    in
+    case ( getRange original, getRange other ) of
         ( _, Nothing ) ->
-            left
+            original
 
         ( Nothing, _ ) ->
-            empty
+            Leaf sorter
 
         ( Just ( lMin, lMax ), Just ( rMin, rMax ) ) ->
-            if lMax < rMin || rMax < lMin then
-                -- disjoint ranges
-                left
+            case Sort.toOrder sorter lMax rMin of
+                LT ->
+                    -- disjoint ranges
+                    original
 
-            else
-                fromSortedList False
-                    (Tuple.first (foldl diffAccumulator ( [], toList right ) left))
+                _ ->
+                    case Sort.toOrder sorter rMax lMin of
+                        LT ->
+                            -- disjoint ranges
+                            original
+
+                        _ ->
+                            fromSortedList sorter
+                                False
+                                (Tuple.first (foldl (diffAccumulator sorter) ( [], toList other ) original))
 
 
-diffAccumulator : k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
-diffAccumulator lKey lVal ( result, rList ) =
+diffAccumulator : Sorter k -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
+diffAccumulator sorter lKey lVal ( result, rList ) =
     case rList of
         [] ->
             ( ( lKey, lVal ) :: result, [] )
 
         ( rKey, rVal ) :: rRest ->
-            case compare lKey rKey of
+            case Sort.toOrder sorter lKey rKey of
                 LT ->
                     ( ( lKey, lVal ) :: result, rList )
 
                 GT ->
-                    diffAccumulator lKey lVal ( result, rRest )
+                    diffAccumulator sorter lKey lVal ( result, rRest )
 
                 EQ ->
                     ( result, rRest )
@@ -702,14 +748,15 @@ accumulators for when a given key appears:
 
 -}
 merge :
-    (k -> a -> result -> result)
+    Sorter k
+    -> (k -> a -> result -> result)
     -> (k -> a -> b -> result -> result)
     -> (k -> b -> result -> result)
     -> Dict k a
     -> Dict k b
     -> result
     -> result
-merge leftStep bothStep rightStep leftDict rightDict initialResult =
+merge sorter leftStep bothStep rightStep leftDict rightDict initialResult =
     let
         stepState rKey rValue ( list, result ) =
             case list of
@@ -717,14 +764,15 @@ merge leftStep bothStep rightStep leftDict rightDict initialResult =
                     ( list, rightStep rKey rValue result )
 
                 ( lKey, lValue ) :: rest ->
-                    if lKey < rKey then
-                        stepState rKey rValue ( rest, leftStep lKey lValue result )
+                    case Sort.toOrder sorter lKey rKey of
+                        LT ->
+                            stepState rKey rValue ( rest, leftStep lKey lValue result )
 
-                    else if lKey > rKey then
-                        ( list, rightStep rKey rValue result )
+                        GT ->
+                            ( list, rightStep rKey rValue result )
 
-                    else
-                        ( rest, bothStep lKey lValue rValue result )
+                        EQ ->
+                            ( rest, bothStep lKey lValue rValue result )
 
         ( leftovers, intermediateResult ) =
             foldl stepState ( toList leftDict, initialResult ) rightDict
@@ -761,35 +809,36 @@ toList dict =
 
 {-| Convert an association list into a dictionary.
 -}
-fromList : List ( k, v ) -> Dict k v
-fromList list =
+fromList : Sorter k -> List ( k, v ) -> Dict k v
+fromList sorter list =
     case list of
         pair :: rest ->
             let
                 ( sorted, remainder ) =
-                    splitSortedHelp [] pair rest
+                    splitSortedHelp sorter [] pair rest
             in
             List.foldl
                 (\( k, v ) dict -> insert k v dict)
-                (fromSortedList False sorted)
+                (fromSortedList sorter False sorted)
                 remainder
 
         [] ->
-            empty
+            Leaf sorter
 
 
 {-| Split a list into its sorted prefix and the remainder. The sorted prefix
 is returned in reversed order.
 -}
-splitSortedHelp : List ( k, v ) -> ( k, v ) -> List ( k, v ) -> ( List ( k, v ), List ( k, v ) )
-splitSortedHelp sorted (( k1, _ ) as p1) list =
+splitSortedHelp : Sorter k -> List ( k, v ) -> ( k, v ) -> List ( k, v ) -> ( List ( k, v ), List ( k, v ) )
+splitSortedHelp sorter sorted (( k1, _ ) as p1) list =
     case list of
         (( k2, _ ) as p2) :: rest ->
-            if k1 < k2 then
-                splitSortedHelp (p1 :: sorted) p2 rest
+            case Sort.toOrder sorter k1 k2 of
+                LT ->
+                    splitSortedHelp sorter (p1 :: sorted) p2 rest
 
-            else
-                ( sorted, p1 :: list )
+                _ ->
+                    ( sorted, p1 :: list )
 
         [] ->
             ( p1 :: sorted, [] )
@@ -797,14 +846,14 @@ splitSortedHelp sorted (( k1, _ ) as p1) list =
 
 {-| Convert an association list with sorted and distinct keys into a dictionary.
 -}
-fromSortedList : Bool -> List ( k, v ) -> Dict k v
-fromSortedList isAsc list =
+fromSortedList : Sorter k -> Bool -> List ( k, v ) -> Dict k v
+fromSortedList sorter isAsc list =
     case list of
         [] ->
-            Leaf
+            Leaf sorter
 
         pair :: rest ->
-            fromNodeList isAsc (sortedListToNodeList isAsc [] pair rest)
+            fromNodeList sorter isAsc (sortedListToNodeList sorter isAsc [] pair rest)
 
 
 {-| Represents a non-empty list of nodes separated by key-value pairs.
@@ -816,76 +865,77 @@ type alias NodeList k v =
 {-| Convert a non-empty association list to the bottom level of nodes separated
 by key-value pairs. (reverses order)
 -}
-sortedListToNodeList : Bool -> List ( ( k, v ), Dict k v ) -> ( k, v ) -> List ( k, v ) -> NodeList k v
-sortedListToNodeList isAsc revList ( k1, v1 ) list =
+sortedListToNodeList : Sorter k -> Bool -> List ( ( k, v ), Dict k v ) -> ( k, v ) -> List ( k, v ) -> NodeList k v
+sortedListToNodeList sorter isAsc revList ( k1, v1 ) list =
     case list of
         [] ->
-            ( Node Black k1 v1 Leaf Leaf, revList )
+            ( Node sorter Black k1 v1 (Leaf sorter) (Leaf sorter), revList )
 
         ( k2, v2 ) :: [] ->
             if isAsc then
-                ( Node Black k2 v2 (Node Red k1 v1 Leaf Leaf) Leaf, revList )
+                ( Node sorter Black k2 v2 (Node sorter Red k1 v1 (Leaf sorter) (Leaf sorter)) (Leaf sorter), revList )
 
             else
-                ( Node Black k1 v1 (Node Red k2 v2 Leaf Leaf) Leaf, revList )
+                ( Node sorter Black k1 v1 (Node sorter Red k2 v2 (Leaf sorter) (Leaf sorter)) (Leaf sorter), revList )
 
         p2 :: ( k3, v3 ) :: [] ->
-            ( Node Black k3 v3 Leaf Leaf, ( p2, Node Black k1 v1 Leaf Leaf ) :: revList )
+            ( Node sorter Black k3 v3 (Leaf sorter) (Leaf sorter), ( p2, Node sorter Black k1 v1 (Leaf sorter) (Leaf sorter) ) :: revList )
 
         ( k2, v2 ) :: p3 :: p4 :: rest ->
             if isAsc then
-                sortedListToNodeList isAsc (( p3, Node Black k2 v2 (Node Red k1 v1 Leaf Leaf) Leaf ) :: revList) p4 rest
+                sortedListToNodeList sorter isAsc (( p3, Node sorter Black k2 v2 (Node sorter Red k1 v1 (Leaf sorter) (Leaf sorter)) (Leaf sorter) ) :: revList) p4 rest
 
             else
-                sortedListToNodeList isAsc (( p3, Node Black k1 v1 (Node Red k2 v2 Leaf Leaf) Leaf ) :: revList) p4 rest
+                sortedListToNodeList sorter isAsc (( p3, Node sorter Black k1 v1 (Node sorter Red k2 v2 (Leaf sorter) (Leaf sorter)) (Leaf sorter) ) :: revList) p4 rest
 
 
 {-| Gather up a NodeList one level at a time, in successive passes of alternating
 direction, until a single root-node remains.
 -}
-fromNodeList : Bool -> NodeList k v -> Dict k v
-fromNodeList isReversed nodeList =
+fromNodeList : Sorter k -> Bool -> NodeList k v -> Dict k v
+fromNodeList sorter isReversed nodeList =
     case nodeList of
         ( node, [] ) ->
             node
 
         ( a, ( p1, b ) :: list ) ->
-            fromNodeList (not isReversed)
-                (accumulateNodeList isReversed [] a p1 b list)
+            fromNodeList sorter
+                (not isReversed)
+                (accumulateNodeList sorter isReversed [] a p1 b list)
 
 
 {-| Gather up a NodeList to the next level. (reverses order)
 -}
-accumulateNodeList : Bool -> List ( ( k, v ), Dict k v ) -> Dict k v -> ( k, v ) -> Dict k v -> List ( ( k, v ), Dict k v ) -> NodeList k v
-accumulateNodeList isReversed revList a ( k1, v1 ) b list =
+accumulateNodeList : Sorter k -> Bool -> List ( ( k, v ), Dict k v ) -> Dict k v -> ( k, v ) -> Dict k v -> List ( ( k, v ), Dict k v ) -> NodeList k v
+accumulateNodeList sorter isReversed revList a ( k1, v1 ) b list =
     case list of
         [] ->
             if isReversed then
-                ( Node Black k1 v1 b a, revList )
+                ( Node sorter Black k1 v1 b a, revList )
 
             else
-                ( Node Black k1 v1 a b, revList )
+                ( Node sorter Black k1 v1 a b, revList )
 
         ( ( k2, v2 ), c ) :: [] ->
             if isReversed then
-                ( Node Black k1 v1 (Node Red k2 v2 c b) a, revList )
+                ( Node sorter Black k1 v1 (Node sorter Red k2 v2 c b) a, revList )
 
             else
-                ( Node Black k2 v2 (Node Red k1 v1 a b) c, revList )
+                ( Node sorter Black k2 v2 (Node sorter Red k1 v1 a b) c, revList )
 
         ( p2, c ) :: ( ( k3, v3 ), d ) :: [] ->
             if isReversed then
-                ( Node Black k3 v3 d c, ( p2, Node Black k1 v1 b a ) :: revList )
+                ( Node sorter Black k3 v3 d c, ( p2, Node sorter Black k1 v1 b a ) :: revList )
 
             else
-                ( Node Black k3 v3 c d, ( p2, Node Black k1 v1 a b ) :: revList )
+                ( Node sorter Black k3 v3 c d, ( p2, Node sorter Black k1 v1 a b ) :: revList )
 
         ( ( k2, v2 ), c ) :: ( p3, d ) :: ( p4, e ) :: rest ->
             if isReversed then
-                accumulateNodeList isReversed (( p3, Node Black k1 v1 (Node Red k2 v2 c b) a ) :: revList) d p4 e rest
+                accumulateNodeList sorter isReversed (( p3, Node sorter Black k1 v1 (Node sorter Red k2 v2 c b) a ) :: revList) d p4 e rest
 
             else
-                accumulateNodeList isReversed (( p3, Node Black k2 v2 (Node Red k1 v1 a b) c ) :: revList) d p4 e rest
+                accumulateNodeList sorter isReversed (( p3, Node sorter Black k2 v2 (Node sorter Red k1 v1 a b) c ) :: revList) d p4 e rest
 
 
 
@@ -909,12 +959,12 @@ validateInvariants dict =
 
 isBST : Dict k v -> Bool
 isBST dict =
-    isBSTHelper True (keys dict)
+    isBSTHelper (getSorter dict) True (keys dict)
 
 
-isBSTHelper : Bool -> List k -> Bool
-isBSTHelper acc keys =
-    case keys of
+isBSTHelper : Sorter k -> Bool -> List k -> Bool
+isBSTHelper sorter acc keyList =
+    case keyList of
         [] ->
             acc
 
@@ -922,7 +972,16 @@ isBSTHelper acc keys =
             acc
 
         x :: y :: xs ->
-            isBSTHelper (acc && x < y) (y :: xs)
+            let
+                xLessThanY =
+                    case Sort.toOrder sorter x y of
+                        LT ->
+                            True
+
+                        _ ->
+                            False
+            in
+            isBSTHelper sorter (acc && xLessThanY) (y :: xs)
 
 
 is23 : Dict k v -> Bool
@@ -992,3 +1051,13 @@ isBalancedHelper node blacks =
                         blacks - 1
             in
             isBalancedHelper left nextBlacks && isBalancedHelper right nextBlacks
+
+
+getSorter : Dict k v -> Sorter k
+getSorter dict =
+    case dict of
+        Leaf sorter ->
+            sorter
+
+        Node sorter _ _ _ _ _ ->
+            sorter
