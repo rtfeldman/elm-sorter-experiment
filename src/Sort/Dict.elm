@@ -8,8 +8,6 @@ module Sort.Dict
         , foldr
         , fromList
         , get
-        , insert
-        , insertAll
         , intersect
         , isEmpty
         , keys
@@ -20,6 +18,8 @@ module Sort.Dict
         , remove
         , singleton
         , size
+        , store
+        , storeAll
         , toList
         , update
         , values
@@ -42,7 +42,7 @@ that are not `comparable`.
 
 # Build
 
-@docs empty, singleton, insert, remove, update
+@docs empty, singleton, store, remove, update
 
 
 # Query
@@ -57,7 +57,7 @@ that are not `comparable`.
 
 # Combine
 
-@docs insertAll, intersect, diff, merge
+@docs storeAll, intersect, diff, merge
 
 
 # Lists
@@ -178,12 +178,12 @@ member key dict =
             False
 
 
-{-| Insert a key-value pair into a dictionary. Replaces value when there is
-a collision.
+{-| Store a key-value pair in a dictionary. Replaces value when that key is
+already present.
 -}
-insert : k -> v -> Dict k v -> Dict k v
-insert key value dict =
-    case insertHelp key value dict of
+store : k -> v -> Dict k v -> Dict k v
+store key value dict =
+    case storeHelp key value dict of
         Node sorter Red k v l r ->
             Node sorter Black k v l r
 
@@ -191,8 +191,8 @@ insert key value dict =
             x
 
 
-insertHelp : k -> v -> Dict k v -> Dict k v
-insertHelp key value dict =
+storeHelp : k -> v -> Dict k v -> Dict k v
+storeHelp key value dict =
     case dict of
         Leaf sorter ->
             -- New nodes are always red. If it violates the rules, it will be fixed
@@ -202,10 +202,10 @@ insertHelp key value dict =
         Node sorter nColor nKey nValue nLeft nRight ->
             case Sort.toOrder sorter key nKey of
                 LT ->
-                    balance sorter nColor nKey nValue (insertHelp key value nLeft) nRight
+                    balance sorter nColor nKey nValue (storeHelp key value nLeft) nRight
 
                 GT ->
-                    balance sorter nColor nKey nValue nLeft (insertHelp key value nRight)
+                    balance sorter nColor nKey nValue nLeft (storeHelp key value nRight)
 
                 EQ ->
                     Node sorter nColor nKey value nLeft nRight
@@ -451,7 +451,7 @@ moveRedRight dict =
 {-| Update the value of a dictionary for a specific key with a given function.
 The given function gets the current value as a parameter and its return value
 determines if the value is updated or removed. New key-value pairs can be
-inserted too.
+stored too.
 -}
 update : k -> (Maybe v -> Maybe v) -> Dict k v -> Dict k v
 update key alter dict =
@@ -460,7 +460,7 @@ update key alter dict =
             remove key dict
 
         Just value ->
-            insert key value dict
+            store key value dict
 
 
 
@@ -543,10 +543,10 @@ partition predicate dict =
 
 
 {-| Take all the key-value pairs in the `from` dictionary and
-`insert` them into the `into` dictionary.
+`store` them into the `into` dictionary.
 -}
-insertAll : { from : Dict k v, into : Dict k v } -> Dict k v
-insertAll { from, into } =
+storeAll : { from : Dict k v, into : Dict k v } -> Dict k v
+storeAll { from, into } =
     case ( from, into ) of
         ( _, Leaf _ ) ->
             from
@@ -735,7 +735,7 @@ fromList sorter list =
                     splitSortedHelp sorter [] pair rest
             in
             List.foldl
-                (\( k, v ) dict -> insert k v dict)
+                (\( k, v ) dict -> store k v dict)
                 (fromSortedList sorter False sorted)
                 remainder
 

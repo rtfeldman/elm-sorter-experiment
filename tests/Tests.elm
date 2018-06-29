@@ -42,8 +42,8 @@ tests =
                 [ test "empty numbers" <| \() -> Expect.equal (Dict.fromList Sort.increasing []) (Dict.empty Sort.increasing)
                 , test "empty strings" <| \() -> Expect.equal (Dict.fromList Sort.alphabetical []) (Dict.empty Sort.alphabetical)
                 , test "singleton" <| \() -> Expect.equal (Dict.fromList Sort.alphabetical [ ( "k", "v" ) ]) (Dict.singleton Sort.alphabetical "k" "v")
-                , test "insert" <| \() -> Expect.equal (Dict.fromList Sort.alphabetical [ ( "k", "v" ) ]) (Dict.insert "k" "v" (Dict.empty Sort.alphabetical))
-                , test "insert replace" <| \() -> Expect.equal (Dict.fromList Sort.alphabetical [ ( "k", "vv" ) ]) (Dict.insert "k" "vv" (Dict.singleton Sort.alphabetical "k" "v"))
+                , test "store" <| \() -> Expect.equal (Dict.fromList Sort.alphabetical [ ( "k", "v" ) ]) (Dict.store "k" "v" (Dict.empty Sort.alphabetical))
+                , test "store replace" <| \() -> Expect.equal (Dict.fromList Sort.alphabetical [ ( "k", "vv" ) ]) (Dict.store "k" "vv" (Dict.singleton Sort.alphabetical "k" "v"))
                 , test "update" <| \() -> Expect.equal (Dict.fromList Sort.alphabetical [ ( "k", "vv" ) ]) (Dict.update "k" (\v -> Just "vv") (Dict.singleton Sort.alphabetical "k" "v"))
                 , test "update Nothing" <| \() -> Expect.equal (Dict.empty Sort.alphabetical) (Dict.update "k" (\v -> Nothing) (Dict.singleton Sort.alphabetical "k" "v"))
                 , test "remove" <| \() -> Expect.equal (Dict.empty Sort.alphabetical) (Dict.remove "k" (Dict.singleton Sort.alphabetical "k" "v"))
@@ -79,8 +79,8 @@ tests =
 
         combineTests =
             describe "combine Tests"
-                [ test "insertAll" <| \() -> Expect.equal animals (Dict.insertAll { from = Dict.singleton Sort.alphabetical "Jerry" "mouse", into = Dict.singleton Sort.alphabetical "Tom" "cat" })
-                , test "insertAll collison" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "cat") (Dict.insertAll { from = Dict.singleton Sort.alphabetical "Tom" "cat", into = Dict.singleton Sort.alphabetical "Tom" "mouse" })
+                [ test "insertAll" <| \() -> Expect.equal animals (Dict.storeAll { from = Dict.singleton Sort.alphabetical "Jerry" "mouse", into = Dict.singleton Sort.alphabetical "Tom" "cat" })
+                , test "insertAll collison" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "cat") (Dict.storeAll { from = Dict.singleton Sort.alphabetical "Tom" "cat", into = Dict.singleton Sort.alphabetical "Tom" "mouse" })
                 , test "intersect" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "cat") (Dict.intersect { preferred = animals, other = Dict.singleton Sort.alphabetical "Tom" "cat" })
                 , test "intersect collision" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "wolf") (Dict.intersect { preferred = Dict.singleton Sort.alphabetical "Tom" "wolf", other = animals })
                 , test "diff" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Jerry" "mouse") (Dict.diff { original = animals, other = Dict.singleton Sort.alphabetical "Tom" "cat" })
@@ -97,16 +97,16 @@ tests =
         mergeTests =
             let
                 insertBoth key leftVal rightVal dict =
-                    Dict.insert key (leftVal ++ rightVal) dict
+                    Dict.store key (leftVal ++ rightVal) dict
 
                 s1 =
-                    Dict.empty Sort.alphabetical |> Dict.insert "u1" [ 1 ]
+                    Dict.empty Sort.alphabetical |> Dict.store "u1" [ 1 ]
 
                 s2 =
-                    Dict.empty Sort.alphabetical |> Dict.insert "u2" [ 2 ]
+                    Dict.empty Sort.alphabetical |> Dict.store "u2" [ 2 ]
 
                 s23 =
-                    Dict.empty Sort.alphabetical |> Dict.insert "u2" [ 3 ]
+                    Dict.empty Sort.alphabetical |> Dict.store "u2" [ 3 ]
 
                 b1 =
                     List.map (\i -> ( i, [ i ] )) (List.range 1 10) |> Dict.fromList Sort.increasing
@@ -121,23 +121,23 @@ tests =
                 [ test "merge empties" <|
                     \() ->
                         Expect.equal (Dict.empty Sort.alphabetical)
-                            (Dict.merge Sort.alphabetical Dict.insert insertBoth Dict.insert (Dict.empty Sort.alphabetical) (Dict.empty Sort.alphabetical) (Dict.empty Sort.alphabetical))
+                            (Dict.merge Sort.alphabetical Dict.store insertBoth Dict.store (Dict.empty Sort.alphabetical) (Dict.empty Sort.alphabetical) (Dict.empty Sort.alphabetical))
                 , test "merge singletons in order" <|
                     \() ->
                         Expect.equal [ ( "u1", [ 1 ] ), ( "u2", [ 2 ] ) ]
-                            (Dict.merge Sort.alphabetical Dict.insert insertBoth Dict.insert s1 s2 (Dict.empty Sort.alphabetical) |> Dict.toList)
+                            (Dict.merge Sort.alphabetical Dict.store insertBoth Dict.store s1 s2 (Dict.empty Sort.alphabetical) |> Dict.toList)
                 , test "merge singletons out of order" <|
                     \() ->
                         Expect.equal [ ( "u1", [ 1 ] ), ( "u2", [ 2 ] ) ]
-                            (Dict.merge Sort.alphabetical Dict.insert insertBoth Dict.insert s2 s1 (Dict.empty Sort.alphabetical) |> Dict.toList)
+                            (Dict.merge Sort.alphabetical Dict.store insertBoth Dict.store s2 s1 (Dict.empty Sort.alphabetical) |> Dict.toList)
                 , test "merge with duplicate key" <|
                     \() ->
                         Expect.equal [ ( "u2", [ 2, 3 ] ) ]
-                            (Dict.merge Sort.alphabetical Dict.insert insertBoth Dict.insert s2 s23 (Dict.empty Sort.alphabetical) |> Dict.toList)
+                            (Dict.merge Sort.alphabetical Dict.store insertBoth Dict.store s2 s23 (Dict.empty Sort.alphabetical) |> Dict.toList)
                 , test "partially overlapping" <|
                     \() ->
                         Expect.equal bExpected
-                            (Dict.merge Sort.increasing Dict.insert insertBoth Dict.insert b1 b2 (Dict.empty Sort.increasing) |> Dict.toList)
+                            (Dict.merge Sort.increasing Dict.store insertBoth Dict.store b1 b2 (Dict.empty Sort.increasing) |> Dict.toList)
                 ]
 
         fuzzTests =
@@ -152,11 +152,11 @@ tests =
                             |> Expect.equal (BaseDict.toList (BaseDict.fromList pairs))
                 , fuzz2 fuzzPairs pairRange "Insert works" <|
                     \pairs num ->
-                        Dict.toList (Dict.insert num num (Dict.fromList Sort.increasing pairs))
+                        Dict.toList (Dict.store num num (Dict.fromList Sort.increasing pairs))
                             |> Expect.equal (BaseDict.toList (BaseDict.insert num num (BaseDict.fromList pairs)))
                 , fuzz2 fuzzPairs pairRange "Insert maintains invariant" <|
                     \pairs num ->
-                        validateInvariants (Dict.insert num num (Dict.fromList Sort.increasing pairs))
+                        validateInvariants (Dict.store num num (Dict.fromList Sort.increasing pairs))
                             |> Expect.equal ""
                 , fuzz2 fuzzPairs pairRange "Removal works" <|
                     \pairs num ->
@@ -168,11 +168,11 @@ tests =
                             |> Expect.equal ""
                 , fuzz2 fuzzPairs fuzzPairs "insertAll maintains invariant" <|
                     \pairs pairs2 ->
-                        validateInvariants (Dict.insertAll { from = Dict.fromList Sort.increasing pairs, into = Dict.fromList Sort.increasing pairs2 })
+                        validateInvariants (Dict.storeAll { from = Dict.fromList Sort.increasing pairs, into = Dict.fromList Sort.increasing pairs2 })
                             |> Expect.equal ""
                 , fuzz2 fuzzPairs fuzzPairs "insertAll works" <|
                     \pairs pairs2 ->
-                        Dict.toList (Dict.insertAll { from = Dict.fromList Sort.increasing pairs, into = Dict.fromList Sort.increasing pairs2 })
+                        Dict.toList (Dict.storeAll { from = Dict.fromList Sort.increasing pairs, into = Dict.fromList Sort.increasing pairs2 })
                             |> Expect.equal (BaseDict.toList (BaseDict.union (BaseDict.fromList pairs) (BaseDict.fromList pairs2)))
                 , fuzz2 fuzzPairs fuzzPairs "Intersect maintains invariant" <|
                     \pairs pairs2 ->

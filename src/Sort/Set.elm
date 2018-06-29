@@ -92,7 +92,7 @@ singleton sorter key =
 -}
 add : a -> Set a -> Set a
 add key (Set_elm_builtin dict) =
-    Set_elm_builtin (Dict.insert key () dict)
+    Set_elm_builtin (Dict.store key () dict)
 
 
 {-| Remove a value from a set. If the value is not found, no changes are made.
