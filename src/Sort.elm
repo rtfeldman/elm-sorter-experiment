@@ -68,7 +68,7 @@ reverse (Sorter sort) =
 
 One way to use this is with collections of records:
 
-    Sort.list (Sort.by .name String.alphabetical)
+    Sort.list (Sort.by .name Sort.alphabetical)
       [ { name = "Bo" }, { name = "Amy" }, { name = "Cam" } ]
     --> [ { name = "Amy" }, { name = "Bo" }, { name = "Cam" } ]
 
