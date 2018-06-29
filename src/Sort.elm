@@ -61,7 +61,12 @@ type Sorter a
 -}
 reverse : Sorter a -> Sorter a
 reverse (Sorter sort) =
-    Sorter (\first second -> sort second first)
+    Sorter (flip sort)
+
+
+flip : (a -> b -> c) -> b -> a -> c
+flip fn a b =
+    fn b a
 
 
 {-| Sort by a derived value.
