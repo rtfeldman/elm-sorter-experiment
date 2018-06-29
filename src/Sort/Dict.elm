@@ -1,4 +1,4 @@
-module Dict.LLRB
+module Sort.Dict
     exposing
         ( Dict
         , diff
