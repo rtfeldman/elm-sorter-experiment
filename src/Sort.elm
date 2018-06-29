@@ -1,11 +1,11 @@
-module Sort exposing (Sorter, alphabetical, by, custom, increasing, list, reverse, toOrder)
+module Sort exposing (Sorter, alphabetical, by, custom, increasing, list, reverse, tiebreaker, toOrder)
 
 {-| Sort values. You can use this as a self-documenting alternative to `List.sort`:
 
     Sort.list Sort.alphabetical [ "foo", "bar", "baz" ]
         --> [ "baz", "bar", "foo" ]
 
-You can also use `Sort.by` and `Sort.reverse` to transform sorters:
+You can also use [`Sort.by`](#by), [`Sort.reverse`](#reverse), and [`Sort.tiebreaker`](#tiebreaker) to transform sorters:
 
     -- Sort users by name, in reverse alphabetical order
     Sort.list
@@ -23,7 +23,12 @@ do not have to be `comparable`. See the `Sort.Dict` and `Sort.Set` modules.
 
 ## Conversions
 
-@docs custom, reverse, by, toOrder
+@docs custom, toOrder
+
+
+## Composing Sorters
+
+@docs reverse, by, tiebreaker
 
 
 ## Primitives
@@ -92,6 +97,40 @@ Another use is for unwrapping union type constructors:
 by : (b -> a) -> Sorter a -> Sorter b
 by transform (Sorter sort) =
     Sorter (\first second -> sort (transform first) (transform second))
+
+
+{-| Apply a tiebreaker `Sorter` to use when the given `Sorter` finds the
+two values are equal.
+
+This would be useful in a table that is sorted by multiple columns.
+
+    -- Without tiebreaker
+    Sort.list (Sort.by .name Sort.alphabetical)
+        [ { name = "Bo", cats = 4 }, { name = "Bo", cats = 2 }, { name = "Amy", cats = 3 } ]
+        --> [ { name = "Amy", cats = 3 }, { name = "Bo", cats = 4 }, { name = "Bo", cats = 2 } ]
+
+    -- With tiebreaker, the last two records are swapped
+    Sort.list (Sort.by .name Sort.alphabetical |> Sort.tiebreaker (Sort.by .cats Sort.increasing))
+        [ { name = "Bo", cats = 4 }, { name = "Bo", cats = 2 }, { name = "Amy", cats = 3 } ]
+        --> [ { name = "Amy", cats = 3 }, { name = "Bo", cats = 2 }, { name = "Bo", cats = 4 } ]
+
+-}
+tiebreaker : Sorter b -> Sorter b -> Sorter b
+tiebreaker (Sorter breakTie) (Sorter sort) =
+    Sorter (sortWithTiebreaker breakTie sort)
+
+
+sortWithTiebreaker : (a -> a -> Order) -> (a -> a -> Order) -> a -> a -> Order
+sortWithTiebreaker breakTie sort first second =
+    case sort first second of
+        LT ->
+            LT
+
+        GT ->
+            GT
+
+        EQ ->
+            breakTie first second
 
 
 {-| Create a custom [`Sorter`](#Sorter) by defining how to order two values.
