@@ -1,6 +1,6 @@
 {
     "version": "1.0.0",
-    "summary": "Experimental Sorter package",
+    "summary": "Experimental Sorter/Dict/Set API.",
     "repository": "https://github.com/rtfeldman/elm-sorter-experiment.git",
     "license": "BSD-3-Clause",
     "source-directories": [

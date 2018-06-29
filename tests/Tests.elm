@@ -4,6 +4,7 @@ import Basics exposing (..)
 import Dict as BaseDict
 import Expect
 import Fuzz exposing (Fuzzer)
+import Internal.Dict exposing (validateInvariants)
 import List
 import Maybe exposing (..)
 import Sort
@@ -61,7 +62,7 @@ tests =
                                             dict =
                                                 Dict.fromList Sort.increasing list
                                         in
-                                        Expect.equal ( "", list ) ( Dict.validateInvariants dict, Dict.toList dict )
+                                        Expect.equal ( "", list ) ( validateInvariants dict, Dict.toList dict )
                             )
                     )
                 ]
@@ -78,8 +79,8 @@ tests =
 
         combineTests =
             describe "combine Tests"
-                [ test "union" <| \() -> Expect.equal animals (Dict.union { preferred = Dict.singleton Sort.alphabetical "Jerry" "mouse", replaced = Dict.singleton Sort.alphabetical "Tom" "cat" })
-                , test "union collison" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "cat") (Dict.union { preferred = Dict.singleton Sort.alphabetical "Tom" "cat", replaced = Dict.singleton Sort.alphabetical "Tom" "mouse" })
+                [ test "insertAll" <| \() -> Expect.equal animals (Dict.insertAll { from = Dict.singleton Sort.alphabetical "Jerry" "mouse", into = Dict.singleton Sort.alphabetical "Tom" "cat" })
+                , test "insertAll collison" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "cat") (Dict.insertAll { from = Dict.singleton Sort.alphabetical "Tom" "cat", into = Dict.singleton Sort.alphabetical "Tom" "mouse" })
                 , test "intersect" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "cat") (Dict.intersect { preferred = animals, other = Dict.singleton Sort.alphabetical "Tom" "cat" })
                 , test "intersect collision" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "wolf") (Dict.intersect { preferred = Dict.singleton Sort.alphabetical "Tom" "wolf", other = animals })
                 , test "diff" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Jerry" "mouse") (Dict.diff { original = animals, other = Dict.singleton Sort.alphabetical "Tom" "cat" })
@@ -155,7 +156,7 @@ tests =
                             |> Expect.equal (BaseDict.toList (BaseDict.insert num num (BaseDict.fromList pairs)))
                 , fuzz2 fuzzPairs pairRange "Insert maintains invariant" <|
                     \pairs num ->
-                        Dict.validateInvariants (Dict.insert num num (Dict.fromList Sort.increasing pairs))
+                        validateInvariants (Dict.insert num num (Dict.fromList Sort.increasing pairs))
                             |> Expect.equal ""
                 , fuzz2 fuzzPairs pairRange "Removal works" <|
                     \pairs num ->
@@ -163,19 +164,19 @@ tests =
                             |> Expect.equal (BaseDict.toList (BaseDict.remove num (BaseDict.fromList pairs)))
                 , fuzz2 fuzzPairs pairRange "Remove maintains invariant" <|
                     \pairs num ->
-                        Dict.validateInvariants (Dict.remove num (Dict.fromList Sort.increasing pairs))
+                        validateInvariants (Dict.remove num (Dict.fromList Sort.increasing pairs))
                             |> Expect.equal ""
-                , fuzz2 fuzzPairs fuzzPairs "Union maintains invariant" <|
+                , fuzz2 fuzzPairs fuzzPairs "insertAll maintains invariant" <|
                     \pairs pairs2 ->
-                        Dict.validateInvariants (Dict.union { preferred = Dict.fromList Sort.increasing pairs, replaced = Dict.fromList Sort.increasing pairs2 })
+                        validateInvariants (Dict.insertAll { from = Dict.fromList Sort.increasing pairs, into = Dict.fromList Sort.increasing pairs2 })
                             |> Expect.equal ""
-                , fuzz2 fuzzPairs fuzzPairs "Union works" <|
+                , fuzz2 fuzzPairs fuzzPairs "insertAll works" <|
                     \pairs pairs2 ->
-                        Dict.toList (Dict.union { preferred = Dict.fromList Sort.increasing pairs, replaced = Dict.fromList Sort.increasing pairs2 })
+                        Dict.toList (Dict.insertAll { from = Dict.fromList Sort.increasing pairs, into = Dict.fromList Sort.increasing pairs2 })
                             |> Expect.equal (BaseDict.toList (BaseDict.union (BaseDict.fromList pairs) (BaseDict.fromList pairs2)))
                 , fuzz2 fuzzPairs fuzzPairs "Intersect maintains invariant" <|
                     \pairs pairs2 ->
-                        Dict.validateInvariants (Dict.intersect { preferred = Dict.fromList Sort.increasing pairs, other = Dict.fromList Sort.increasing pairs2 })
+                        validateInvariants (Dict.intersect { preferred = Dict.fromList Sort.increasing pairs, other = Dict.fromList Sort.increasing pairs2 })
                             |> Expect.equal ""
                 , fuzz2 fuzzPairs fuzzPairs "Intersect works" <|
                     \pairs pairs2 ->
@@ -183,7 +184,7 @@ tests =
                             |> Expect.equal (BaseDict.toList (BaseDict.intersect (BaseDict.fromList pairs) (BaseDict.fromList pairs2)))
                 , fuzz2 fuzzPairs fuzzPairs "Diff maintains invariant" <|
                     \pairs pairs2 ->
-                        Dict.validateInvariants (Dict.diff { original = Dict.fromList Sort.increasing pairs, other = Dict.fromList Sort.increasing pairs2 })
+                        validateInvariants (Dict.diff { original = Dict.fromList Sort.increasing pairs, other = Dict.fromList Sort.increasing pairs2 })
                             |> Expect.equal ""
                 , fuzz2 fuzzPairs fuzzPairs "Diff works" <|
                     \pairs pairs2 ->

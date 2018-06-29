@@ -40,6 +40,8 @@ do not have to be `comparable`. See the `Sort.Dict` and `Sort.Set` modules.
 -- TYPES --
 
 
+{-| A description of how to sort values of a particular type.
+-}
 type Sorter a
     = Sorter (a -> a -> Order)
 
@@ -142,6 +144,21 @@ increasing =
 -- COLLECTIONS --
 
 
+{-| Sort a list using a `Sorter`.
+
+This can be used as an alternative to `List.sort`, `List.sortBy`, and `List.sortWith`.
+
+    Sort.list Sort.alphabetical [ "foo", "bar", "baz" ]
+        --> [ "baz", "bar", "foo" ]
+
+You can also use `Sort.by` and `Sort.reverse` to transform sorters:
+
+    -- Sort users by name, in reverse alphabetical order
+    Sort.list
+        (Sort.by .name (Sort.reverse Sort.alphabetical))
+        users
+
+-}
 list : Sorter a -> List a -> List a
 list (Sorter sort) elems =
     List.sortWith sort elems
