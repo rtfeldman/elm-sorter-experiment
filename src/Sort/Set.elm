@@ -2,6 +2,7 @@ module Sort.Set
     exposing
         ( Set
         , add
+        , addAll
         , diff
         , empty
         , filter
@@ -17,7 +18,6 @@ module Sort.Set
         , singleton
         , size
         , toList
-        , union
         )
 
 {-| A set of unique values.
@@ -47,7 +47,7 @@ that are not `comparable`.
 
 # Combine
 
-@docs union, intersect, diff
+@docs addAll, intersect, diff
 
 
 # Lists
@@ -125,19 +125,19 @@ size (Set_elm_builtin dict) =
 
 {-| Get the union of two sets. Keep all values.
 -}
-union : Sorter a -> Set a -> Set a -> Set a
-union sorter (Set_elm_builtin dict1) (Set_elm_builtin dict2) =
-    case ( dict1, dict2 ) of
-        ( _, Leaf _ ) ->
-            Set_elm_builtin dict1
+addAll : { from : Set a, to : Set a } -> Set a
+addAll { from, to } =
+    case ( from, to ) of
+        ( set, Set_elm_builtin (Leaf _) ) ->
+            set
 
-        ( Leaf _, _ ) ->
-            Set_elm_builtin dict2
+        ( Set_elm_builtin (Leaf _), set ) ->
+            set
 
-        ( Node _ _ _ _ _ _, _ ) ->
+        ( Set_elm_builtin ((Node _ _ _ _ _ _) as fromDict), Set_elm_builtin ((Node sorter _ _ _ _ _) as toDict) ) ->
             let
                 ( lt, gt ) =
-                    Dict.foldl (unionAccumulator sorter) ( [], Dict.toList dict2 ) dict1
+                    Dict.foldl (unionAccumulator sorter) ( [], Dict.toList fromDict ) toDict
             in
             fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
                 |> Set_elm_builtin
