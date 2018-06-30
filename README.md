@@ -24,6 +24,7 @@ under the hood for some performance benefits.
 * [`eeue56/elm-all-dict`](http://package.elm-lang.org/packages/eeue56/elm-all-dict/latest) by Noah Hall
 * [`robertjlooby/elm-generic-dict`](http://package.elm-lang.org/packages/robertjlooby/elm-generic-dict/latest) by Robert J. Looby
 * [`Skinney/elm-dict-exploration`](http://package.elm-lang.org/packages/Skinney/elm-dict-exploration/latest) by Robin Heggelund Hansen
+* [`NoRedInk/elm-compare`](http://package.elm-lang.org/packages/NoRedInk/elm-compare/latest) by Jasper Woudenberg
 
 ## `Set` and `Dict` API Changes
 
