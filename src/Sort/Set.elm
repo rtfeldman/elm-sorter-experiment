@@ -3,7 +3,6 @@ module Sort.Set
         ( Set
         , add
         , addAll
-        , diff
         , empty
         , filter
         , foldl
@@ -14,6 +13,7 @@ module Sort.Set
         , member
         , partition
         , remove
+        , removeAll
         , singleton
         , size
         , toList
@@ -46,7 +46,7 @@ that are not `comparable`.
 
 # Combine
 
-@docs addAll, diff
+@docs addAll, removeAll
 
 
 # Lists
@@ -142,22 +142,18 @@ addAll { from, to } =
                 |> Set_elm_builtin
 
 
-{-| Keep a value when it appears in the `original` set
-but not in the `other` set.
-
-The `original` set's `Sorter` will be used.
-
+{-| Remove all values in the `remove` set from the `from` set.
 -}
-diff : { original : Set a, other : Set a } -> Set a
-diff { original, other } =
+removeAll : { remove : Set a, from : Set a } -> Set a
+removeAll record =
     let
-        (Set_elm_builtin originalDict) =
-            original
+        (Set_elm_builtin fromDict) =
+            record.from
 
-        (Set_elm_builtin otherDict) =
-            other
+        (Set_elm_builtin removeDict) =
+            record.remove
     in
-    Set_elm_builtin (Dict.diff { original = originalDict, other = otherDict })
+    Set_elm_builtin (Dict.removeAll { from = fromDict, remove = removeDict })
 
 
 {-| Convert a set into a list, sorted from lowest to highest.

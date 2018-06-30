@@ -1,7 +1,6 @@
 module Sort.Dict
     exposing
         ( Dict
-        , diff
         , empty
         , filter
         , foldl
@@ -15,6 +14,7 @@ module Sort.Dict
         , merge
         , partition
         , remove
+        , removeAll
         , singleton
         , size
         , store
@@ -56,7 +56,7 @@ that are not `comparable`.
 
 # Combine
 
-@docs storeAll, diff, merge
+@docs storeAll, removeAll, merge
 
 
 # Lists
@@ -561,59 +561,11 @@ storeAll { from, into } =
             fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
 
 
-{-| Keep a key-value pair when its key appears in the `original` dictionary
-but not in the `other` dictionary.
-
-The `original` dictionary's `Sorter` will be used.
-
+{-| Remove all keys in the `remove` dictionary from the `from` dictionary.
 -}
-diff : { original : Dict k v, other : Dict k v } -> Dict k v
-diff { original, other } =
-    let
-        sorter =
-            getSorter original
-    in
-    case ( getRange original, getRange other ) of
-        ( _, Nothing ) ->
-            original
-
-        ( Nothing, _ ) ->
-            Leaf sorter
-
-        ( Just ( lMin, lMax ), Just ( rMin, rMax ) ) ->
-            case Sort.toOrder sorter lMax rMin of
-                LT ->
-                    -- disjoint ranges
-                    original
-
-                _ ->
-                    case Sort.toOrder sorter rMax lMin of
-                        LT ->
-                            -- disjoint ranges
-                            original
-
-                        _ ->
-                            fromSortedList sorter
-                                False
-                                (Tuple.first (foldl (diffAccumulator sorter) ( [], toList other ) original))
-
-
-diffAccumulator : Sorter k -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
-diffAccumulator sorter lKey lVal ( result, rList ) =
-    case rList of
-        [] ->
-            ( ( lKey, lVal ) :: result, [] )
-
-        ( rKey, rVal ) :: rRest ->
-            case Sort.toOrder sorter lKey rKey of
-                LT ->
-                    ( ( lKey, lVal ) :: result, rList )
-
-                GT ->
-                    diffAccumulator sorter lKey lVal ( result, rRest )
-
-                EQ ->
-                    ( result, rRest )
+removeAll : { remove : Dict k v, from : Dict k v } -> Dict k v
+removeAll record =
+    foldl (\key _ acc -> remove key acc) record.remove record.from
 
 
 {-| The most general way of combining two dictionaries. You provide three
