@@ -9,7 +9,6 @@ module Sort.Set
         , foldl
         , foldr
         , fromList
-        , intersect
         , isEmpty
         , map
         , member
@@ -47,7 +46,7 @@ that are not `comparable`.
 
 # Combine
 
-@docs addAll, intersect, diff
+@docs addAll, diff
 
 
 # Lists
@@ -143,36 +142,6 @@ addAll { from, to } =
                 |> Set_elm_builtin
 
 
-{-| Get the intersection of two sets. Keeps values that appear in both sets.
--}
-intersect : Sorter a -> Set a -> Set a -> Set a
-intersect sorter (Set_elm_builtin dict1) (Set_elm_builtin dict2) =
-    case ( getRange dict1, getRange dict2 ) of
-        ( _, Nothing ) ->
-            Set_elm_builtin (Leaf sorter)
-
-        ( Nothing, _ ) ->
-            Set_elm_builtin (Leaf sorter)
-
-        ( Just ( lMin, lMax ), Just ( rMin, rMax ) ) ->
-            case Sort.toOrder sorter lMax rMin of
-                LT ->
-                    -- disjoint ranges
-                    Set_elm_builtin (Leaf sorter)
-
-                _ ->
-                    case Sort.toOrder sorter rMax lMin of
-                        LT ->
-                            -- disjoint ranges
-                            Set_elm_builtin (Leaf sorter)
-
-                        _ ->
-                            fromSortedList sorter
-                                False
-                                (Tuple.first (Dict.foldl (intersectAccumulator sorter) ( [], Dict.toList dict2 ) dict1))
-                                |> Set_elm_builtin
-
-
 {-| Keep a value when it appears in the `original` set
 but not in the `other` set.
 
@@ -237,6 +206,14 @@ map sorter func set =
     positives : Set Int
     positives =
         Set.filter (\x -> x > 0) numbers
+
+    evens : Set Int
+    evens =
+        Set.filter (\x -> x % 2 == 0) numbers
+
+    positiveEvens =
+        -- Intersection
+        Set.filter (Set.member positives) evens
 
 
     -- positives == Set.fromList [1,2]

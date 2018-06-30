@@ -8,7 +8,6 @@ module Sort.Dict
         , foldr
         , fromList
         , get
-        , intersect
         , isEmpty
         , keys
         , map
@@ -57,7 +56,7 @@ that are not `comparable`.
 
 # Combine
 
-@docs storeAll, intersect, diff, merge
+@docs storeAll, diff, merge
 
 
 # Lists
@@ -560,43 +559,6 @@ storeAll { from, into } =
                     foldl (unionAccumulator sorter) ( [], toList into ) from
             in
             fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
-
-
-{-| Keep a key-value pair when its key appears in the both the `preferred` and
-in the `other` dictionary.
-
-Preference for values and `Sorter` is given to values in the `preferred` dictionary.
-
--}
-intersect : { preferred : Dict k v, other : Dict k v } -> Dict k v
-intersect { preferred, other } =
-    let
-        sorter =
-            getSorter preferred
-    in
-    case ( getRange preferred, getRange other ) of
-        ( _, Nothing ) ->
-            Leaf sorter
-
-        ( Nothing, _ ) ->
-            Leaf sorter
-
-        ( Just ( lMin, lMax ), Just ( rMin, rMax ) ) ->
-            case Sort.toOrder sorter lMax rMin of
-                LT ->
-                    -- disjoint ranges
-                    Leaf sorter
-
-                _ ->
-                    case Sort.toOrder sorter rMax lMin of
-                        LT ->
-                            -- disjoint ranges
-                            Leaf sorter
-
-                        _ ->
-                            fromSortedList sorter
-                                False
-                                (Tuple.first (foldl (intersectAccumulator sorter) ( [], toList other ) preferred))
 
 
 {-| Keep a key-value pair when its key appears in the `original` dictionary
