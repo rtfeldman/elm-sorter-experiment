@@ -1,13 +1,13 @@
 module Sort.Set
     exposing
         ( Set
-        , add
-        , addAll
         , dropIf
         , empty
         , foldl
         , foldr
         , fromList
+        , insert
+        , insertAll
         , isEmpty
         , keepIf
         , map
@@ -36,7 +36,7 @@ that are not `comparable`.
 
 # Build
 
-@docs empty, singleton, add, addAll, remove
+@docs empty, singleton, insert, insertAll, remove
 
 
 # Query
@@ -82,11 +82,11 @@ singleton sorter key =
     Set_elm_builtin (Dict.singleton sorter key ())
 
 
-{-| Add a value to a set.
+{-| Insert a value into a set.
 -}
-add : a -> Set a -> Set a
-add key (Set_elm_builtin dict) =
-    Set_elm_builtin (Dict.store key () dict)
+insert : a -> Set a -> Set a
+insert key (Set_elm_builtin dict) =
+    Set_elm_builtin (Dict.insert key () dict)
 
 
 {-| Remove a value from a set. If the value is not found, no changes are made.
@@ -117,13 +117,13 @@ size (Set_elm_builtin dict) =
     Dict.size dict
 
 
-{-| Take all the elements in the first set and [`add`](#add) them to the second set.
+{-| Take all the elements in the first set and [`insert`](#insert) them into the second set.
 
 This returns the **union** of the sets.
 
 -}
-addAll : Set a -> Set a -> Set a
-addAll newElems original =
+insertAll : Set a -> Set a -> Set a
+insertAll newElems original =
     case ( newElems, original ) of
         ( set, Set_elm_builtin (Leaf _) ) ->
             set
@@ -151,7 +151,7 @@ toList (Set_elm_builtin dict) =
 -}
 fromList : Sorter a -> List a -> Set a
 fromList sorter list =
-    List.foldl add (empty sorter) list
+    List.foldl insert (empty sorter) list
 
 
 {-| Fold over the values in a set, in order from lowest to highest.
