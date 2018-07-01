@@ -3,17 +3,17 @@ module Sort.Set
         ( Set
         , add
         , addAll
+        , dropIf
         , empty
-        , filter
         , foldl
         , foldr
         , fromList
         , isEmpty
+        , keepIf
         , map
         , member
         , partition
         , remove
-        , removeAll
         , singleton
         , size
         , toList
@@ -36,17 +36,12 @@ that are not `comparable`.
 
 # Build
 
-@docs empty, singleton, add, remove
+@docs empty, singleton, add, addAll, remove
 
 
 # Query
 
 @docs isEmpty, member, size
-
-
-# Combine
-
-@docs addAll, removeAll
 
 
 # Lists
@@ -56,11 +51,11 @@ that are not `comparable`.
 
 # Transform
 
-@docs map, foldl, foldr, filter, partition
+@docs map, keepIf, dropIf, foldl, foldr, partition
 
 -}
 
-import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, intersectAccumulator, unionAccumulator)
+import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, unionAccumulator)
 import List exposing ((::))
 import Sort exposing (Sorter)
 import Sort.Dict as Dict
@@ -108,11 +103,11 @@ isEmpty (Set_elm_builtin dict) =
     Dict.isEmpty dict
 
 
-{-| Determine if a value is in a set.
+{-| Returns `True` if the given value is in the given set.
 -}
-member : a -> Set a -> Bool
-member key (Set_elm_builtin dict) =
-    Dict.member key dict
+member : Set a -> a -> Bool
+member (Set_elm_builtin dict) key =
+    Dict.member dict key
 
 
 {-| Determine the number of elements in a set.
@@ -122,38 +117,27 @@ size (Set_elm_builtin dict) =
     Dict.size dict
 
 
-{-| Get the union of two sets. Keep all values.
+{-| Take all the elements in the first set and [`add`](#add) them to the second set.
+
+This returns the **union** of the sets.
+
 -}
-addAll : { from : Set a, to : Set a } -> Set a
-addAll { from, to } =
-    case ( from, to ) of
+addAll : Set a -> Set a -> Set a
+addAll newElems original =
+    case ( newElems, original ) of
         ( set, Set_elm_builtin (Leaf _) ) ->
             set
 
         ( Set_elm_builtin (Leaf _), set ) ->
             set
 
-        ( Set_elm_builtin ((Node _ _ _ _ _ _) as fromDict), Set_elm_builtin ((Node sorter _ _ _ _ _) as toDict) ) ->
+        ( Set_elm_builtin ((Node _ _ _ _ _ _) as newElems), Set_elm_builtin ((Node sorter _ _ _ _ _) as original) ) ->
             let
                 ( lt, gt ) =
-                    Dict.foldl (unionAccumulator sorter) ( [], Dict.toList fromDict ) toDict
+                    Dict.foldl (unionAccumulator sorter) ( [], Dict.toList newElems ) original
             in
             fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
                 |> Set_elm_builtin
-
-
-{-| Remove all values in the `remove` set from the `from` set.
--}
-removeAll : { remove : Set a, from : Set a } -> Set a
-removeAll record =
-    let
-        (Set_elm_builtin fromDict) =
-            record.from
-
-        (Set_elm_builtin removeDict) =
-            record.remove
-    in
-    Set_elm_builtin (Dict.removeAll { from = fromDict, remove = removeDict })
 
 
 {-| Convert a set into a list, sorted from lowest to highest.
@@ -193,31 +177,44 @@ map sorter func set =
 
 {-| Only keep elements that pass the given test.
 
-    import Set exposing (Set)
-
-    numbers : Set Int
     numbers =
-        Set.fromList [ -2, -1, 0, 1, 2 ]
+        Set.fromList [ -2, -1, 0, 1, 2, 3, 4, 5 ]
 
-    positives : Set Int
     positives =
-        Set.filter (\x -> x > 0) numbers
+        Set.keepIf (\num -> num > 0) numbers
 
-    evens : Set Int
     evens =
-        Set.filter (\x -> x % 2 == 0) numbers
+        Set.keepIf (\num -> num % 2 == 0) numbers
 
     positiveEvens =
         -- Intersection
-        Set.filter (Set.member positives) evens
-
-
-    -- positives == Set.fromList [1,2]
+        Set.keepIf (Set.member evens) positives
 
 -}
-filter : (a -> Bool) -> Set a -> Set a
-filter isGood (Set_elm_builtin dict) =
-    Set_elm_builtin (Dict.filter (\key _ -> isGood key) dict)
+keepIf : (a -> Bool) -> Set a -> Set a
+keepIf shouldKeep (Set_elm_builtin dict) =
+    Set_elm_builtin (Dict.keepIf (\key _ -> shouldKeep key) dict)
+
+
+{-| Remove elements that pass the given test.
+
+    numbers =
+        Set.fromList [ -2, -1, 0, 1, 2, 3, 4, 5 ]
+
+    positives =
+        Set.dropIf (\num -> num <= 0) numbers
+
+    evens =
+        Set.dropIf (\num -> num % 2 == 1) numbers
+
+    positiveOdds =
+        -- Difference
+        Set.dropIf (Set.member evens) positives
+
+-}
+dropIf : (a -> Bool) -> Set a -> Set a
+dropIf shouldDrop (Set_elm_builtin dict) =
+    Set_elm_builtin (Dict.dropIf (\key _ -> shouldDrop key) dict)
 
 
 {-| Create two new sets. The first contains all the elements that passed the

@@ -1,20 +1,20 @@
 module Sort.Dict
     exposing
         ( Dict
+        , dropIf
         , empty
-        , filter
         , foldl
         , foldr
         , fromList
         , get
         , isEmpty
+        , keepIf
         , keys
         , map
         , member
         , merge
         , partition
         , remove
-        , removeAll
         , singleton
         , size
         , store
@@ -41,7 +41,7 @@ that are not `comparable`.
 
 # Build
 
-@docs empty, singleton, store, remove, update
+@docs empty, singleton, store, storeAll, remove, update, merge
 
 
 # Query
@@ -51,12 +51,7 @@ that are not `comparable`.
 
 # Transform
 
-@docs map, filter, foldl, foldr, partition
-
-
-# Combine
-
-@docs storeAll, removeAll, merge
+@docs map, keepIf, dropIf, foldl, foldr, partition
 
 
 # Lists
@@ -65,7 +60,7 @@ that are not `comparable`.
 
 -}
 
-import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, getSorter, intersectAccumulator, unionAccumulator)
+import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, getSorter, unionAccumulator)
 import List exposing (..)
 import Maybe exposing (..)
 import Sort exposing (Sorter)
@@ -165,10 +160,10 @@ get targetKey dict =
                     Just value
 
 
-{-| Determine if a key is in a dictionary.
+{-| Returns `True` if the given key is in the given dictionary.
 -}
-member : k -> Dict k v -> Bool
-member key dict =
+member : Dict k v -> k -> Bool
+member dict key =
     case get key dict of
         Just _ ->
             True
@@ -478,17 +473,32 @@ map f dict =
             Node sorter color key (f key value) (map f left) (map f right)
 
 
-{-| Keep a key-value pair when it satisfies a predicate.
+{-| Keep a key-value pair only if it satisfies a predicate.
 -}
-filter : (k -> v -> Bool) -> Dict k v -> Dict k v
-filter predicate dict =
+keepIf : (k -> v -> Bool) -> Dict k v -> Dict k v
+keepIf isKeepable dict =
     let
         helper key value list =
-            if predicate key value then
+            if isKeepable key value then
                 ( key, value ) :: list
 
             else
                 list
+    in
+    fromSortedList (getSorter dict) True (foldr helper [] dict)
+
+
+{-| Remove a key-value pair if it satisfies a predicate.
+-}
+dropIf : (k -> v -> Bool) -> Dict k v -> Dict k v
+dropIf shouldDrop dict =
+    let
+        helper key value list =
+            if shouldDrop key value then
+                list
+
+            else
+                ( key, value ) :: list
     in
     fromSortedList (getSorter dict) True (foldr helper [] dict)
 
@@ -541,41 +551,36 @@ partition predicate dict =
 -- COMBINE
 
 
-{-| Take all the key-value pairs in the `from` dictionary and
-`store` them into the `into` dictionary.
+{-| Take all the key-value pairs in the first dictionary and
+`store` them into the second dictionary.
 -}
-storeAll : { from : Dict k v, into : Dict k v } -> Dict k v
-storeAll { from, into } =
-    case ( from, into ) of
+storeAll : Dict k v -> Dict k v -> Dict k v
+storeAll newElems original =
+    case ( newElems, original ) of
         ( _, Leaf _ ) ->
-            from
+            newElems
 
         ( Leaf _, _ ) ->
-            into
+            original
 
         ( Node sorter _ _ _ _ _, _ ) ->
             let
                 ( lt, gt ) =
-                    foldl (unionAccumulator sorter) ( [], toList into ) from
+                    foldl (unionAccumulator sorter) ( [], toList original ) newElems
             in
             fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
-
-
-{-| Remove all keys in the `remove` dictionary from the `from` dictionary.
--}
-removeAll : { remove : Dict k v, from : Dict k v } -> Dict k v
-removeAll record =
-    foldl (\key _ acc -> remove key acc) record.remove record.from
 
 
 {-| The most general way of combining two dictionaries. You provide three
 accumulators for when a given key appears:
 
-1.  Only in the left dictionary.
-2.  In both dictionaries.
-3.  Only in the right dictionary.
-    You then traverse all the keys from lowest to highest, building up whatever
-    you want.
+1.  Only in the first dictionary
+2.  In both dictionaries
+3.  Only in the second dictionary
+
+You then traverse all the keys, building up whatever you want.
+
+The given `Sorter` will be used to compare the keys.
 
 -}
 merge :

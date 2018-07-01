@@ -6,7 +6,6 @@ module Internal.Dict
         , fromSortedList
         , getRange
         , getSorter
-        , intersectAccumulator
         , keys
         , unionAccumulator
         , validateInvariants
@@ -84,24 +83,6 @@ unionAccumulator sorter lKey lVal ( result, rList ) =
 
                 GT ->
                     unionAccumulator sorter lKey lVal ( ( rKey, rVal ) :: result, rRest )
-
-                EQ ->
-                    ( ( lKey, lVal ) :: result, rRest )
-
-
-intersectAccumulator : Sorter k -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
-intersectAccumulator sorter lKey lVal (( result, rList ) as return) =
-    case rList of
-        [] ->
-            return
-
-        ( rKey, rVal ) :: rRest ->
-            case Sort.toOrder sorter lKey rKey of
-                LT ->
-                    return
-
-                GT ->
-                    intersectAccumulator sorter lKey lVal ( result, rRest )
 
                 EQ ->
                     ( ( lKey, lVal ) :: result, rRest )
