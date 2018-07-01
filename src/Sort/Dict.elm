@@ -13,7 +13,7 @@ module Sort.Dict
         , keepIf
         , keys
         , map
-        , member
+        , memberOf
         , merge
         , partition
         , remove
@@ -46,7 +46,7 @@ that are not `comparable`.
 
 # Query
 
-@docs isEmpty, size, get, member
+@docs isEmpty, size, get, memberOf
 
 
 # Transform
@@ -162,8 +162,8 @@ get targetKey dict =
 
 {-| Returns `True` if the given key is in the given dictionary.
 -}
-member : Dict k v -> k -> Bool
-member dict key =
+memberOf : Dict k v -> k -> Bool
+memberOf dict key =
     case get key dict of
         Just _ ->
             True

@@ -12,7 +12,7 @@ They are:
 
 1. A composable `Sorter` API that replaces `List.sort`, `List.sortBy`, and `List.sortWith` with a single function (`Sort.list`). In particular, `Sort.by` and `Sort.reverse` (when used together) nicely scratch an itch I've encountered on a few different occasions.
 2. An implementation of `Dict` and `Set` that use `Sorter` to permit keys that are not `comparable`.
-3. Some minor naming changes to `Dict` and `Set` (explained below).
+3. Some API changes to `Dict` and `Set` that seem nicer independent of (but especially in conjunction with) the introduction of `Sorter`.
 
 Since we're already in experimental territory, I based this experiment on another
 one; this is using [`Skinney/elm-dict-exploration`](http://package.elm-lang.org/packages/Skinney/elm-dict-exploration/latest)
@@ -28,7 +28,32 @@ under the hood for some performance benefits.
 
 ## `Set` and `Dict` API Changes
 
-In this package, the following operations on both `Set` and `Dict` now take
+In this package, `filter` has been replaced by `keepIf` and `dropIf`.
+
+The argument order on `member` has also been flipped, and its name has been
+adjusted to reflect the new ordering:
+
+```elm
+Set.memberOf : Set a -> a -> Bool
+Dict.memberOf : Dict k v -> k -> Bool
+```
+
+In practice, at work we've wanted to partially apply `member` almost always
+with this argument ordering rather than the one currently in `elm/core`. This
+ordering works wonderfully with `keepIf` and `dropIf`:
+
+```elm
+positiveEvens =
+    Set.keepIf (Set.memberOf evens) positives
+
+positiveOdds =
+    Set.dropIf (Set.memberOf evens) positives
+```
+
+Now that it's so easy to filter based on other sets, it's questionable whether
+`Set.intersect` and `Set.diff` should remain in the API. (More on this later.)
+
+The following operations on `Set` and `Dict` now take
 a `Sorter` as their first argument:
 
 * `empty`
@@ -36,91 +61,65 @@ a `Sorter` as their first argument:
 * `fromList`
 * `merge`
 
-Additionally, `diff` has been given named arguments in order to prevent ordering mistakes. It is now:
+Finally, `union` has been renamed to `insertAll`:
 
 ```elm
-{-| Keep a value when it appears in the `original` set
-but not in the `other` set. The `original` set's `Sorter` will be used.
-
+{-| Take all the key-value pairs in the first dictionary and
+`insert` them into the second dictionary.
 -}
-diff : { original : Set a, other : Set a } -> Set a
+insertAll : Dict k v -> Dict k v -> Dict k v
 ```
 
-## `Set` API Changes
+This makes it clear what happens when both dictionaries have the same key but
+different values: it does what `insert` would do in that situation. (It also
+makes it clear which dictionary's `Sorter` will be used - once again, by
+looking to what `insert` does.)
 
-### `insert`
-```diff
--insert : a -> Set a -> Set a
-+add : a -> Set a -> Set a
+> It could be even clearer with labeled arguments. Here's a way to do that without sacrificing partial application: `insertAll : { from : Dict k v } -> Dict k v -> Dict k v`. So you'd call it with `Dict.insertAll { from = otherDict } someDict`. Definitely looks weird though. I'm unsure that this would be better overall.
+
+`Set.union` has been renamed to `Set.insertAll`, both for symmetry
+with `Dict.insertAll` and because it answers the question of which `Sorter`
+will be used.
+
+> `Set.union` could alternatively be kept as `Set.union` because that's a term from set theory. In that case, it should probably be `Set.union : Sorter a -> Set a -> Set a -> Set a` to make it clear what comparison would be used.
+
+## Other `Set` API Changes
+
+`diff` and `intersect` have been removed in favor of using `keepIf` and `dropIf`,
+which work nicely with `Set.memberOf`:
+
+```elm
+positiveEvens =
+    Set.keepIf (Set.memberOf evens) positives
+    -- Set.intersect positives evens
+
+positiveOdds =
+    Set.dropIf (Set.memberOf evens) positives
+    -- Set.diff positives evens
 ```
 
-There is strong consensus among languages for what this operation should be called.
-Python, Ruby, Java, JavaScript, and OCaml, all call this `add`. Erlang calls it
-`addElement` and Scala overloads `(+)` for this operation.
+`map` needs an extra argument to specify the `Sorter` for the resulting `Set`.
+It is now:
 
-Only Haskell calls it `insert`.
-
-### `map`
-
-```diff
--map : (a -> b) -> Set a -> Set b
-+map : Sorter b -> (a -> b) -> Set a -> Set b
+```elm
+map : Sorter b -> (a -> b) -> Set a -> Set b
 ```
 
-An extra argument is needed to specify the `Sorter` for the resulting `Set`.
+## Other `Dict` API Changes
 
-### `intersect` and `union`
+`diff` and `intersect` have been removed.
 
-```diff
--intersect : Set a -> Set a -> Set a
-+intersect : Sorter a -> Set a -> Set a
+In both the `comparable` and the `Sorter` APIs, there are several concerns with
+these functions:
 
--union : Set a -> Set a -> Set a
-+union : Sorter a -> Set a -> Set a
-```
+1. In both functions, it matters which `Dict` is passed first and which is passed second. However, looking at a call site, it is unclear which ordering leads to which outcome. This means that not only can the compiler not help with mistakes, it is also hard for programmers to spot mistakes. It's common to need to consult documentation to understand what a `Dict.intersect` or `Dict.diff` call is actually doing.
+1. Further compounding the previous point, their argument ordering is inconsistent with respect to one another, making it easy to mix up which has which order. `Dict.intersect` does the equivalent of `Dict.keepIf` on the second dictionary (checking for membership in the first dictionary), whereas `Dict.diff` does the equivalent of `Dict.dropIf` on the *first* dictionary (checking for membership in the *second* dictionary). Because of this, `Dict.diff` is also generally inconsistent with how other functions in `elm/core` order their arguments; it would be more typical if flipped.
+1. They are rarely used in Elm, and no other programming language except Haskell implements them for their dictionary equivalents. Even if there were no other concerns with these functions, it's debatable whether they merit inclusion in the API - especially considering they are convenience shorthands for simple `keepIf`/`dropIf` calls rather than sources of new functionality.
 
-These now take an explicit `Sorter` in order to make it clear which sorting
-operation will be used.
+These are all problems that exist with the current `comparable` API, but they
+are exacerbated by the `Sorter` API.
 
-## `Dict` API Changes
-
-### `insert`
-
-```diff
--insert : k -> v -> Dict k v -> Dict k v
-+store : k -> v -> Dict k v -> Dict k v
-```
-
-There is no consensus among languages for what this operation should be called.
-Ruby's `store` seems clearer than Haskell's `insert` because "inserting" is
-often an operation that strictly increases the size of the collection
-(e.g. `INSERT` in SQL) whereas "storing" is idempotent.
-
-(Other alternatives considered: `put` from Java, `add` from OCaml, `replace`
-from ReasonML, `set` from JavaScript.)
-
-### `intersect`
-
-```diff
--intersect : Dict k v -> Dict k v -> Dict k v
-+intersect : { preferred : Dict k v, other : Dict k v } -> Dict k v
-```
-
-`intersect` has been given named arguments in order to clarify which values will be kept.
-
-### `union`
-
-```diff
--union : Dict k v -> Dict -> k v -> Dict k v
-+storeAll : { from : Dict k v, into : Dict k v } -> Dict k v
-```
-
-`union` has been renamed and given named arguments to make it clearer what happens
-in the event of collisions.
-
-"It takes all the key/value pairs from one dictionary and `store`s them into
-the other one" builds on the caller's understanding of how `store` resolves
-collisions.
-
-This API also makes it clear which dictionary's `Sorter` will be used.
-
+Fortunately, using `Dict.keepIf` and `Dict.dropIf` directly has none of these
+problems. Since it is generally a is better choice to use `Dict.keepIf` and
+`Dict.dropIf` over `Dict.intersect` and `Dict.diff`, those functions
+have been removed.

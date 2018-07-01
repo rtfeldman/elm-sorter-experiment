@@ -11,7 +11,7 @@ module Sort.Set
         , isEmpty
         , keepIf
         , map
-        , member
+        , memberOf
         , partition
         , remove
         , singleton
@@ -41,7 +41,7 @@ that are not `comparable`.
 
 # Query
 
-@docs isEmpty, member, size
+@docs isEmpty, memberOf, size
 
 
 # Lists
@@ -105,9 +105,9 @@ isEmpty (Set_elm_builtin dict) =
 
 {-| Returns `True` if the given value is in the given set.
 -}
-member : Set a -> a -> Bool
-member (Set_elm_builtin dict) key =
-    Dict.member dict key
+memberOf : Set a -> a -> Bool
+memberOf (Set_elm_builtin dict) key =
+    Dict.memberOf dict key
 
 
 {-| Determine the number of elements in a set.
