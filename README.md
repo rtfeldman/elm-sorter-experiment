@@ -7,16 +7,31 @@ It's right there in the name, but just to be totally clear about it:
 I have a hypothesis that these may be good ideas, but they may not be! The
 purpose of this package is to facilitate trying them out and learning more.
 
-This package is a group of related experiments I've been pondering for awhile.
-They are:
+### Goal of the experiment
 
-1. A composable `Sorter` API that replaces `List.sort`, `List.sortBy`, and `List.sortWith` with a single function (`Sort.list`). In particular, `Sort.by` and `Sort.reverse` (when used together) nicely scratch an itch I've encountered on a few different occasions.
+There have been several times in Elm's history that a language-level design constraint has led to the discovery of a nicer API.
+
+1. JSON decoders emerged from not having language-level support for JSON FFI or `deriving`. The resulting API has proven nice enough that [other languages without Elm's language-level restrictions have adopted it](https://medium.com/@DmytroGladkyi/decode-and-encode-json-in-reasonml-2d484c65cf4e). (ReasonML has added language-level support for JSX, so adding native support for JSON decoding would certainly in bounds there.)
+1. The Elm Architecture emerged from Elm's language-level design constraints. Obviously it has proven popular outside Elm as well!
+1. The impetus for [`elm/time`](https://github.com/elm/time) was the realization that if Elm wants to compile to other platforms, it could no longer rely on JavaScript's `Date` under the hood; it needs a pure-Elm solution which obeys the constraint that it can access only a single integer: the number of milliseconds since the UNIX Epoch. The result is a much nicer API!
+
+In Elm, sorting operations typically rely on `comparable`.  The goal of this experiment is to see what sorting-related APIs emerge from introducing a design constrint:
+
+*Do not depend on `comparable` in any way.*
+
+Maybe the resulting APIs are nice. Who knows?
+
+### Current Design
+
+This package currently comprises a few ideas:
+
+1. A composable `Sorter` API that replaces `List.sort`, `List.sortBy`, and `List.sortWith` with a single function (`Sort.list`). In particular, `Sort.by` and `Sort.reverse` (when used together) nicely scratch an itch I've encountered on a few different occasions. `Sort.tiebreaker` addresses a use case we've run into at work.
 2. An implementation of `Dict` and `Set` that use `Sorter` to permit keys that are not `comparable`.
-3. Some API changes to `Dict` and `Set` that seem nicer independent of (but especially in conjunction with) the introduction of `Sorter`.
+3. Some API changes to `Dict` and `Set` that seem nicer independent of (but which also facilitate) the introduction of `Sorter`.
 
-Since we're already in experimental territory, I based this experiment on another
-one; this is using [`Skinney/elm-dict-exploration`](http://package.elm-lang.org/packages/Skinney/elm-dict-exploration/latest)
-under the hood for some performance benefits.
+Since we're already in experimental territory, I based this experimental
+implementation on another one; this is using [`Skinney/elm-dict-exploration`](http://package.elm-lang.org/packages/Skinney/elm-dict-exploration/latest)
+under the hood for some performance gains.
 
 ### Prior art
 
@@ -69,10 +84,8 @@ a `Sorter` as their first argument:
 Set.union : Sorter a -> Set a -> Set a -> Set a
 ```
 
-Since it uses the given `Sorter` to sort the sets, the order of the two sets
-does not matter.
-
-> Alternatively, `union` could be renamed to `insertAll` and could be documented in terms of "inserting all the values from one set into the other" instead of being called `union`, which is an operation where order is not supposed to matter. See `Dict.insertAll`.
+Since it uses the given `Sorter` to sort the combined set, the two `Set` arguments
+can be passed in any order and it will give the same answer.
 
 `Set.diff` and `Set.intersect` have been removed in favor of using `keepIf` and `dropIf`,
 which work nicely with `Set.memberOf`:
@@ -128,3 +141,31 @@ Fortunately, using `Dict.keepIf` and `Dict.dropIf` directly has none of these
 problems. Since it is generally a is better choice to use `Dict.keepIf` and
 `Dict.dropIf` over `Dict.intersect` and `Dict.diff`, those functions
 have been removed.
+
+## Summary of API Changes
+
+ These now take an additional `Sorter` as their first argument:
+
+* `List.sort` (in that this API uses `Sort.list` instead, which takes a `Sorter`)
+* `Set.empty` / `Dict.empty`
+* `Set.singleton` / `Dict.singleton`
+* `Set.fromList` / `Dict.fromList`
+* `Dict.merge`
+* `Set.union`
+
+I do not consider the explicit argument a significant drawback. As [Gary Bernhardt](https://twitter.com/garybernhardt/status/1006983057138741248)
+put it:
+
+> A distressing amount of the history of programming is about ways to avoid passing the first argument around explicitly.
+
+Most of the other API changes affect names and argument ordering, but otherwise the types are the same:
+
+* `Dict.union` has been renamed to `Dict.insertAll` to clarify that argument order
+matters (as it always has).
+* `Set.member` and `Dict.member` have been flipped and renamed to `memberOf`.
+* `Set.filter` and `Dict.filter` have been split into two functions, `keepIf` and `dropIf`.
+
+The only remaining change is that `intersect` and `diff` have been removed.
+Given the changes to `member` and `filter`, the `intersect` and `diff`
+functions have become less nice than using `memberOf` with `keepIf` or `dropIf`
+directly. If it's better not to use them, they shouldn't be in the API anymore.
