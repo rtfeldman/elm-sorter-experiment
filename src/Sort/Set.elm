@@ -60,7 +60,7 @@ that are not `comparable`.
 
 -}
 
-import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, unionAccumulator)
+import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange)
 import List exposing ((::))
 import Sort exposing (Sorter)
 import Sort.Dict as Dict
@@ -132,6 +132,27 @@ union sorter (Set_elm_builtin newElems) (Set_elm_builtin original) =
     in
     fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
         |> Set_elm_builtin
+
+
+{-| This is different from Dict.unionAccumulator in that it doesn't
+need to resolve value collisions - since value is always ().
+-}
+unionAccumulator : Sorter k -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
+unionAccumulator sorter lKey lVal ( result, rList ) =
+    case rList of
+        [] ->
+            ( ( lKey, lVal ) :: result, [] )
+
+        ( rKey, rVal ) :: rRest ->
+            case Sort.toOrder sorter lKey rKey of
+                LT ->
+                    ( ( lKey, lVal ) :: result, rList )
+
+                GT ->
+                    unionAccumulator sorter lKey lVal ( ( rKey, rVal ) :: result, rRest )
+
+                EQ ->
+                    ( ( lKey, lVal ) :: result, rRest )
 
 
 {-| Convert a set into a list, sorted from lowest to highest.

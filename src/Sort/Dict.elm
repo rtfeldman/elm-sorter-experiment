@@ -8,7 +8,6 @@ module Sort.Dict
         , fromList
         , get
         , insert
-        , insertAll
         , isEmpty
         , keepIf
         , keys
@@ -20,6 +19,7 @@ module Sort.Dict
         , singleton
         , size
         , toList
+        , union
         , update
         , values
         )
@@ -41,7 +41,7 @@ that are not `comparable`.
 
 # Build
 
-@docs empty, singleton, insert, insertAll, remove, update, merge
+@docs empty, singleton, insert, union, remove, update, merge
 
 
 # Query
@@ -60,7 +60,7 @@ that are not `comparable`.
 
 -}
 
-import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, getSorter, unionAccumulator)
+import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, getSorter)
 import List exposing (..)
 import Maybe exposing (..)
 import Sort exposing (Sorter)
@@ -551,24 +551,36 @@ partition predicate dict =
 -- COMBINE
 
 
-{-| Take all the key-value pairs in the first dictionary and
-`insert` them into the second dictionary.
+{-| Return a dictionary containing all key-value pairs in both dictionaries.
+
+If any keys appear in both dictionaries, call the provided function to determine which value to keep. The first value passed to that function will come from the first dictionary; the second value will come from the second dictionary.
+
 -}
-insertAll : Dict k v -> Dict k v -> Dict k v
-insertAll newElems original =
-    case ( newElems, original ) of
-        ( _, Leaf _ ) ->
-            newElems
+union : Sorter k -> (k -> v -> v -> v) -> Dict k v -> Dict k v -> Dict k v
+union sorter resolveCollision newElems original =
+    let
+        ( lt, gt ) =
+            foldl (unionAccumulator sorter resolveCollision) ( [], toList original ) newElems
+    in
+    fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
 
-        ( Leaf _, _ ) ->
-            original
 
-        ( Node sorter _ _ _ _ _, _ ) ->
-            let
-                ( lt, gt ) =
-                    foldl (unionAccumulator sorter) ( [], toList original ) newElems
-            in
-            fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
+unionAccumulator : Sorter k -> (k -> v -> v -> v) -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
+unionAccumulator sorter resolveCollision lKey lVal ( result, rList ) =
+    case rList of
+        [] ->
+            ( ( lKey, lVal ) :: result, [] )
+
+        ( rKey, rVal ) :: rRest ->
+            case Sort.toOrder sorter lKey rKey of
+                LT ->
+                    ( ( lKey, lVal ) :: result, rList )
+
+                GT ->
+                    unionAccumulator sorter resolveCollision lKey lVal ( ( rKey, rVal ) :: result, rRest )
+
+                EQ ->
+                    ( ( lKey, resolveCollision lKey lVal rVal ) :: result, rRest )
 
 
 {-| The most general way of combining two dictionaries. You provide three

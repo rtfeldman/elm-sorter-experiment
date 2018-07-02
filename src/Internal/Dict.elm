@@ -7,7 +7,6 @@ module Internal.Dict
         , getRange
         , getSorter
         , keys
-        , unionAccumulator
         , validateInvariants
         )
 
@@ -68,24 +67,6 @@ getSorter dict =
 
         Node sorter _ _ _ _ _ ->
             sorter
-
-
-unionAccumulator : Sorter k -> k -> v -> ( List ( k, v ), List ( k, v ) ) -> ( List ( k, v ), List ( k, v ) )
-unionAccumulator sorter lKey lVal ( result, rList ) =
-    case rList of
-        [] ->
-            ( ( lKey, lVal ) :: result, [] )
-
-        ( rKey, rVal ) :: rRest ->
-            case Sort.toOrder sorter lKey rKey of
-                LT ->
-                    ( ( lKey, lVal ) :: result, rList )
-
-                GT ->
-                    unionAccumulator sorter lKey lVal ( ( rKey, rVal ) :: result, rRest )
-
-                EQ ->
-                    ( ( lKey, lVal ) :: result, rRest )
 
 
 {-| Convert an association list with sorted and distinct keys into a dictionary.

@@ -109,19 +109,20 @@ map : Sorter b -> (a -> b) -> Set a -> Set b
 
 ## Other `Dict` API Changes
 
-`Dict.union` has been renamed to `Dict.insertAll`:
+`Dict.union` has gained two new arguments:
 
 ```elm
-{-| Take all the key-value pairs in the first dictionary and
-`insert` them into the second dictionary.
+{-| Return a dictionary containing all key-value pairs in both dictionaries.
+
+If any keys appear in both dictionaries, call the provided function to determine which value to keep.
+The first value passed to that function will come from the first dictionary; the second value will
+come from the second dictionary.
+
 -}
-insertAll : Dict k v -> Dict k v -> Dict k v
+Dict.union : Sorter k -> (k -> v -> v -> v) -> Dict k v -> Dict k v -> Dict k v
 ```
 
-This makes it clear what happens when both dictionaries have the same key but
-different values: it does what `insert` would do in that situation. (It also
-makes it clear which dictionary's `Sorter` will be used - once again, by
-looking to what `insert` does.)
+This makes it explicit what happens when both dictionaries have the same key but different values. (If you don't care, pass `(\_ _ v -> v)`.) It also makes it clear what `Sorter` will be used.
 
 Additionally, `diff` and `intersect` have been removed. In both the `comparable` and the `Sorter` APIs, there are a few issues with
 these functions:
@@ -143,21 +144,21 @@ have been removed.
  These now take an additional `Sorter` as their first argument:
 
 * `List.sort` (in that this API uses `Sort.list` instead, which takes a `Sorter`)
-* `Set.empty` / `Dict.empty`
-* `Set.singleton` / `Dict.singleton`
-* `Set.fromList` / `Dict.fromList`
-* `Dict.merge`
+* `empty`
+* `singleton`
+* `fromList`
+* `union`
 * `Set.map`
-* `Set.union`
+* `Dict.merge`
 
-I do not consider the explicit argument a significant drawback. As [Gary Bernhardt put it](https://twitter.com/garybernhardt/status/1006983057138741248):
+`Dict.union` also takes one more argument to be explicit about what happens when there's a key collision.
+
+I do not consider these explicit arguments a significant drawback. As [Gary Bernhardt put it](https://twitter.com/garybernhardt/status/1006983057138741248):
 
 > A distressing amount of the history of programming is about ways to avoid passing the first argument around explicitly.
 
 Most of the other API changes affect names and argument ordering, but otherwise the types are the same:
 
-* `Dict.union` has been renamed to `Dict.insertAll` to clarify that argument order
-matters (as it always has).
 * `Set.member` and `Dict.member` have been flipped and renamed to `memberOf`.
 * `Set.filter` and `Dict.filter` have been split into two functions, `keepIf` and `dropIf`.
 
