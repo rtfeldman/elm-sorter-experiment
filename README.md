@@ -151,6 +151,7 @@ have been removed.
 * `Set.singleton` / `Dict.singleton`
 * `Set.fromList` / `Dict.fromList`
 * `Dict.merge`
+* `Set.map`
 * `Set.union`
 
 I do not consider the explicit argument a significant drawback. As [Gary Bernhardt](https://twitter.com/garybernhardt/status/1006983057138741248)
