@@ -160,7 +160,7 @@ get targetKey dict =
                     Just value
 
 
-{-| Returns `True` if the given key is in the given dictionary.
+{-| Return `True` if the given key is in the given dictionary.
 -}
 memberOf : Dict k v -> k -> Bool
 memberOf dict key =

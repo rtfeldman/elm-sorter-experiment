@@ -7,7 +7,6 @@ module Sort.Set
         , foldr
         , fromList
         , insert
-        , insertAll
         , isEmpty
         , keepIf
         , map
@@ -17,6 +16,7 @@ module Sort.Set
         , singleton
         , size
         , toList
+        , union
         )
 
 {-| A set of unique values.
@@ -36,12 +36,17 @@ that are not `comparable`.
 
 # Build
 
-@docs empty, singleton, insert, insertAll, remove
+@docs empty, singleton, insert, remove
 
 
 # Query
 
 @docs isEmpty, memberOf, size
+
+
+# Combine
+
+@docs union
 
 
 # Lists
@@ -103,41 +108,30 @@ isEmpty (Set_elm_builtin dict) =
     Dict.isEmpty dict
 
 
-{-| Returns `True` if the given value is in the given set.
+{-| Return `True` if the given value is in the given set.
 -}
 memberOf : Set a -> a -> Bool
 memberOf (Set_elm_builtin dict) key =
     Dict.memberOf dict key
 
 
-{-| Determine the number of elements in a set.
+{-| Return the number of elements in a set.
 -}
 size : Set a -> Int
 size (Set_elm_builtin dict) =
     Dict.size dict
 
 
-{-| Take all the elements in the first set and [`insert`](#insert) them into the second set.
-
-This returns the **union** of the sets.
-
+{-| Get the union of two sets. Keep all values.
 -}
-insertAll : Set a -> Set a -> Set a
-insertAll newElems original =
-    case ( newElems, original ) of
-        ( set, Set_elm_builtin (Leaf _) ) ->
-            set
-
-        ( Set_elm_builtin (Leaf _), set ) ->
-            set
-
-        ( Set_elm_builtin ((Node _ _ _ _ _ _) as newElems), Set_elm_builtin ((Node sorter _ _ _ _ _) as original) ) ->
-            let
-                ( lt, gt ) =
-                    Dict.foldl (unionAccumulator sorter) ( [], Dict.toList newElems ) original
-            in
-            fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
-                |> Set_elm_builtin
+union : Sorter a -> Set a -> Set a -> Set a
+union sorter (Set_elm_builtin newElems) (Set_elm_builtin original) =
+    let
+        ( lt, gt ) =
+            Dict.foldl (unionAccumulator sorter) ( [], Dict.toList newElems ) original
+    in
+    fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
+        |> Set_elm_builtin
 
 
 {-| Convert a set into a list, sorted from lowest to highest.

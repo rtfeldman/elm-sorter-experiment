@@ -53,7 +53,7 @@ positiveOdds =
 Now that it's so easy to filter based on other sets, it's questionable whether
 `Set.intersect` and `Set.diff` should remain in the API. (More on this later.)
 
-The following operations on `Set` and `Dict` now take
+Finally, the following operations on `Set` and `Dict` now take
 a `Sorter` as their first argument:
 
 * `empty`
@@ -61,31 +61,20 @@ a `Sorter` as their first argument:
 * `fromList`
 * `merge`
 
-Finally, `union` has been renamed to `insertAll`:
-
-```elm
-{-| Take all the key-value pairs in the first dictionary and
-`insert` them into the second dictionary.
--}
-insertAll : Dict k v -> Dict k v -> Dict k v
-```
-
-This makes it clear what happens when both dictionaries have the same key but
-different values: it does what `insert` would do in that situation. (It also
-makes it clear which dictionary's `Sorter` will be used - once again, by
-looking to what `insert` does.)
-
-> It could be even clearer with labeled arguments. Here's a way to do that without sacrificing partial application: `insertAll : { from : Dict k v } -> Dict k v -> Dict k v`. So you'd call it with `Dict.insertAll { from = otherDict } someDict`. Definitely looks weird though. I'm unsure that this would be better overall.
-
-`Set.union` has been renamed to `Set.insertAll`, both for symmetry
-with `Dict.insertAll` and because it answers the question of which `Sorter`
-will be used.
-
-> `Set.union` could alternatively be kept as `Set.union` because that's a term from set theory. In that case, it should probably be `Set.union : Sorter a -> Set a -> Set a -> Set a` to make it clear what comparison would be used.
-
 ## Other `Set` API Changes
 
-`diff` and `intersect` have been removed in favor of using `keepIf` and `dropIf`,
+`Set.union` takes a `Sorter` as its first argument. It is now:
+
+```elm
+Set.union : Sorter a -> Set a -> Set a -> Set a
+```
+
+Since it uses the given `Sorter` to sort the sets, the order of the two sets
+does not matter.
+
+> Alternatively, `union` could be renamed to `insertAll` and could be documented in terms of "inserting all the values from one set into the other" instead of being called `union`, which is an operation where order is not supposed to matter. See `Dict.insertAll`.
+
+`Set.diff` and `Set.intersect` have been removed in favor of using `keepIf` and `dropIf`,
 which work nicely with `Set.memberOf`:
 
 ```elm
@@ -107,9 +96,25 @@ map : Sorter b -> (a -> b) -> Set a -> Set b
 
 ## Other `Dict` API Changes
 
-`diff` and `intersect` have been removed.
+`Dict.union` has been renamed to `Dict.insertAll`:
 
-In both the `comparable` and the `Sorter` APIs, there are several concerns with
+```elm
+{-| Take all the key-value pairs in the first dictionary and
+`insert` them into the second dictionary.
+-}
+insertAll : Dict k v -> Dict k v -> Dict k v
+```
+
+This makes it clear what happens when both dictionaries have the same key but
+different values: it does what `insert` would do in that situation. (It also
+makes it clear which dictionary's `Sorter` will be used - once again, by
+looking to what `insert` does.)
+
+> It could be even clearer with labeled arguments. Here's a way to do that without sacrificing partial application: `insertAll : { from : Dict k v } -> Dict k v -> Dict k v`. So you'd call it with `Dict.insertAll { from = otherDict } someDict`. Definitely looks weird though. I'm unsure that this would be better overall.
+
+Additionally, `diff` and `intersect` have been removed.
+
+In both the `comparable` and the `Sorter` APIs, there are a few issues with
 these functions:
 
 1. In both functions, it matters which `Dict` is passed first and which is passed second. However, looking at a call site, it is unclear which ordering leads to which outcome. This means that not only can the compiler not help with mistakes, it is also hard for programmers to spot mistakes. It's common to need to consult documentation to understand what a `Dict.intersect` or `Dict.diff` call is actually doing.
