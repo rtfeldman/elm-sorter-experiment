@@ -3,7 +3,7 @@ module Sort exposing (Sorter, alphabetical, by, custom, increasing, list, revers
 {-| Sort values. You can use this as a self-documenting alternative to `List.sort`:
 
     Sort.list Sort.alphabetical [ "foo", "bar", "baz" ]
-        --> [ "baz", "bar", "foo" ]
+        --> [ "bar", "baz", "foo" ]
 
 You can also use [`Sort.by`](#by), [`Sort.reverse`](#reverse), and [`Sort.tiebreaker`](#tiebreaker) to transform sorters:
 
