@@ -11,7 +11,7 @@ purpose of this package is to facilitate trying them out and learning more.
 
 There have been several times in Elm's history that a language-level design constraint has led to the discovery of a nicer API.
 
-1. JSON decoders emerged from not having language-level support for JSON FFI or `deriving`. The resulting API has proven nice enough that [other languages without Elm's language-level design constraints have adopted it](https://medium.com/@DmytroGladkyi/decode-and-encode-json-in-reasonml-2d484c65cf4e). (ReasonML has added language-level support for JSX, so adding native support for JSON decoding would certainly in bounds there.)
+1. JSON decoders emerged from not having language-level support for JSON FFI or `deriving`. The resulting API has proven nice enough that [other languages without Elm's language-level design constraints have adopted it](https://medium.com/@DmytroGladkyi/decode-and-encode-json-in-reasonml-2d484c65cf4e). (ReasonML has added language-level support for JSX, so adding native support for JSON decoding would certainly be in bounds there.)
 1. The Elm Architecture emerged from Elm's language-level design constraints. Obviously it has proven popular outside Elm as well!
 1. The impetus for [`elm/time`](https://github.com/elm/time) was the realization that if Elm wants to compile to other platforms, it could no longer rely on JavaScript's `Date` under the hood; it needs a pure-Elm solution which obeys the constraint that it can access only a single integer: the number of milliseconds since the UNIX Epoch. The result is a much nicer API!
 
