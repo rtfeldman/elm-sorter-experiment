@@ -3,6 +3,7 @@ module Sort.Dict
         ( Dict
         , dropIf
         , empty
+        , eq
         , foldl
         , foldr
         , fromList
@@ -46,7 +47,7 @@ that are not `comparable`.
 
 # Query
 
-@docs isEmpty, size, get, memberOf
+@docs isEmpty, size, get, memberOf, eq
 
 
 # Transform
@@ -64,7 +65,6 @@ import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, ge
 import List exposing (..)
 import Maybe exposing (..)
 import Sort exposing (Sorter)
-
 
 
 {-
@@ -92,6 +92,21 @@ type alias Dict key value =
 empty : Sorter k -> Dict k v
 empty sorter =
     Leaf sorter
+
+
+{-| Check if two dictionaries are equal.
+-}
+eq : Dict k v -> Dict k v -> Bool
+eq first second =
+    case ( first, second ) of
+        ( Leaf _, Leaf _ ) ->
+            True
+
+        ( Node _ _ _ fValue fLeft fRight, Node _ _ _ sValue sLeft sRight ) ->
+            fValue == sValue && eq fLeft sLeft && eq fRight sRight
+
+        _ ->
+            False
 
 
 {-| Determine if a dictionary is empty.
@@ -324,7 +339,6 @@ removeHelpEQGT targetKey dict =
 
                     (Leaf _) as leaf ->
                         leaf
-
             else
                 balance sorter color key value left (removeHelp targetKey right)
 
@@ -481,7 +495,6 @@ keepIf isKeepable dict =
         helper key value list =
             if isKeepable key value then
                 ( key, value ) :: list
-
             else
                 list
     in
@@ -496,7 +509,6 @@ dropIf shouldDrop dict =
         helper key value list =
             if shouldDrop key value then
                 list
-
             else
                 ( key, value ) :: list
     in
@@ -534,7 +546,6 @@ partition predicate dict =
         helper key value ( trues, falses ) =
             if predicate key value then
                 ( ( key, value ) :: trues, falses )
-
             else
                 ( trues, ( key, value ) :: falses )
 

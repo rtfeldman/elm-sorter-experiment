@@ -3,6 +3,7 @@ module Sort.Set
         ( Set
         , dropIf
         , empty
+        , eq
         , foldl
         , foldr
         , fromList
@@ -41,7 +42,7 @@ that are not `comparable`.
 
 # Query
 
-@docs isEmpty, memberOf, size
+@docs isEmpty, memberOf, size, eq
 
 
 # Combine
@@ -78,6 +79,13 @@ type Set t
 empty : Sorter a -> Set a
 empty sorter =
     Set_elm_builtin (Dict.empty sorter)
+
+
+{-| Check if two sets are equal
+-}
+eq : Set a -> Set a -> Bool
+eq (Set_elm_builtin first) (Set_elm_builtin second) =
+    Dict.eq first second
 
 
 {-| Create a set with one value.
