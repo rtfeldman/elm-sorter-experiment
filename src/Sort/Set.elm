@@ -71,20 +71,20 @@ import Sort.Dict as Dict
 `(Set String)` is a set of strings.
 -}
 type Set t
-    = Set_elm_builtin (Dict t ())
+    = Set (Dict t ())
 
 
 {-| Create an empty set.
 -}
 empty : Sorter a -> Set a
 empty sorter =
-    Set_elm_builtin (Dict.empty sorter)
+    Set (Dict.empty sorter)
 
 
 {-| Check if two sets are equal
 -}
 eq : Set a -> Set a -> Bool
-eq (Set_elm_builtin first) (Set_elm_builtin second) =
+eq (Set first) (Set second) =
     Dict.eq first second
 
 
@@ -92,60 +92,60 @@ eq (Set_elm_builtin first) (Set_elm_builtin second) =
 -}
 singleton : Sorter a -> a -> Set a
 singleton sorter key =
-    Set_elm_builtin (Dict.singleton sorter key ())
+    Set (Dict.singleton sorter key ())
 
 
 {-| Insert a value into a set.
 -}
 insert : a -> Set a -> Set a
-insert key (Set_elm_builtin dict) =
-    Set_elm_builtin (Dict.insert key () dict)
+insert key (Set dict) =
+    Set (Dict.insert key () dict)
 
 
 {-| Remove a value from a set. If the value is not found, no changes are made.
 -}
 remove : a -> Set a -> Set a
-remove key (Set_elm_builtin dict) =
-    Set_elm_builtin (Dict.remove key dict)
+remove key (Set dict) =
+    Set (Dict.remove key dict)
 
 
 {-| Determine if a set is empty.
 -}
 isEmpty : Set a -> Bool
-isEmpty (Set_elm_builtin dict) =
+isEmpty (Set dict) =
     Dict.isEmpty dict
 
 
 {-| Return `True` if the given value is in the given set.
 -}
 memberOf : Set a -> a -> Bool
-memberOf (Set_elm_builtin dict) key =
+memberOf (Set dict) key =
     Dict.memberOf dict key
 
 
 {-| Return the number of elements in a set.
 -}
 size : Set a -> Int
-size (Set_elm_builtin dict) =
+size (Set dict) =
     Dict.size dict
 
 
 {-| Get the union of two sets. Keep all values.
 -}
 union : Sorter a -> Set a -> Set a -> Set a
-union sorter (Set_elm_builtin newElems) (Set_elm_builtin original) =
+union sorter (Set newElems) (Set original) =
     let
         ( lt, gt ) =
             Dict.foldl (unionAccumulator sorter) ( [], Dict.toList newElems ) original
     in
     fromSortedList sorter False (List.foldl (\e acc -> e :: acc) lt gt)
-        |> Set_elm_builtin
+        |> Set
 
 
 {-| Convert a set into a list, sorted from lowest to highest.
 -}
 toList : Set a -> List a
-toList (Set_elm_builtin dict) =
+toList (Set dict) =
     Dict.keys dict
 
 
@@ -159,14 +159,14 @@ fromList sorter list =
 {-| Fold over the values in a set, in order from lowest to highest.
 -}
 foldl : (a -> b -> b) -> b -> Set a -> b
-foldl func initialState (Set_elm_builtin dict) =
+foldl func initialState (Set dict) =
     Dict.foldl (\key _ state -> func key state) initialState dict
 
 
 {-| Fold over the values in a set, in order from highest to lowest.
 -}
 foldr : (a -> b -> b) -> b -> Set a -> b
-foldr func initialState (Set_elm_builtin dict) =
+foldr func initialState (Set dict) =
     Dict.foldr (\key _ state -> func key state) initialState dict
 
 
@@ -194,8 +194,8 @@ map sorter func set =
 
 -}
 keepIf : (a -> Bool) -> Set a -> Set a
-keepIf shouldKeep (Set_elm_builtin dict) =
-    Set_elm_builtin (Dict.keepIf (\key _ -> shouldKeep key) dict)
+keepIf shouldKeep (Set dict) =
+    Set (Dict.keepIf (\key _ -> shouldKeep key) dict)
 
 
 {-| Remove elements that pass the given test.
@@ -215,17 +215,17 @@ keepIf shouldKeep (Set_elm_builtin dict) =
 
 -}
 dropIf : (a -> Bool) -> Set a -> Set a
-dropIf shouldDrop (Set_elm_builtin dict) =
-    Set_elm_builtin (Dict.dropIf (\key _ -> shouldDrop key) dict)
+dropIf shouldDrop (Set dict) =
+    Set (Dict.dropIf (\key _ -> shouldDrop key) dict)
 
 
 {-| Create two new sets. The first contains all the elements that passed the
 given test, and the second contains all the elements that did not.
 -}
 partition : (a -> Bool) -> Set a -> ( Set a, Set a )
-partition isGood (Set_elm_builtin dict) =
+partition isGood (Set dict) =
     let
         ( dict1, dict2 ) =
             Dict.partition (\key _ -> isGood key) dict
     in
-    ( Set_elm_builtin dict1, Set_elm_builtin dict2 )
+    ( Set dict1, Set dict2 )
