@@ -1,15 +1,14 @@
-module Internal.Dict
-    exposing
-        ( Color(..)
-        , Dict(..)
-        , foldr
-        , fromSortedList
-        , getRange
-        , getSorter
-        , keys
-        , unionAccumulator
-        , validateInvariants
-        )
+module Internal.Dict exposing
+    ( Color(..)
+    , Dict(..)
+    , foldr
+    , fromSortedList
+    , getRange
+    , getSorter
+    , keys
+    , unionAccumulator
+    , validateInvariants
+    )
 
 import Sort exposing (Sorter)
 

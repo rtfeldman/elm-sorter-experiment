@@ -1,14 +1,17 @@
 {
     "type": "package",
-    "version": "2.0.1",
-    "summary": "Experimental Sorter package",
     "name": "rtfeldman/elm-sorter-experiment",
-    "repository": "https://github.com/rtfeldman/elm-sorter-experiment.git",
+    "summary": "Experimental Sorter package",
     "license": "BSD-3-Clause",
-    "exposed-modules": ["Sort", "Sort.Dict", "Sort.Set"],
+    "version": "2.1.0",
+    "exposed-modules": [
+        "Sort",
+        "Sort.Dict",
+        "Sort.Set"
+    ],
     "elm-version": "0.19.0 <= v < 0.20.0",
     "dependencies": {
         "elm/core": "1.0.0 <= v < 2.0.0"
     },
-    "test-dependencies": { }
+    "test-dependencies": {}
 }

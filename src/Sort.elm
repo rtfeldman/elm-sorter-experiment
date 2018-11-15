@@ -1,4 +1,10 @@
-module Sort exposing (Sorter, alphabetical, by, custom, increasing, list, reverse, tiebreaker, toOrder)
+module Sort exposing
+    ( Sorter
+    , custom, toOrder
+    , reverse, by, tiebreaker
+    , alphabetical, increasing
+    , list
+    )
 
 {-| Sort values. You can use this as a self-documenting alternative to `List.sort`:
 

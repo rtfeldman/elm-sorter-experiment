@@ -1,29 +1,10 @@
-module Sort.Dict
-    exposing
-        ( Dict
-        , dropIf
-        , empty
-        , eq
-        , foldl
-        , foldr
-        , fromList
-        , get
-        , insert
-        , insertAll
-        , isEmpty
-        , keepIf
-        , keys
-        , map
-        , memberOf
-        , merge
-        , partition
-        , remove
-        , singleton
-        , size
-        , toList
-        , update
-        , values
-        )
+module Sort.Dict exposing
+    ( Dict
+    , empty, singleton, insert, insertAll, remove, update, merge
+    , isEmpty, size, get, memberOf, eq
+    , map, keepIf, dropIf, foldl, foldr, partition
+    , keys, values, toList, fromList
+    )
 
 {-| A dictionary mapping unique keys to values.
 
@@ -65,6 +46,7 @@ import Internal.Dict exposing (Color(..), Dict(..), fromSortedList, getRange, ge
 import List exposing (..)
 import Maybe exposing (..)
 import Sort exposing (Sorter)
+
 
 
 {-
@@ -339,6 +321,7 @@ removeHelpEQGT targetKey dict =
 
                     (Leaf _) as leaf ->
                         leaf
+
             else
                 balance sorter color key value left (removeHelp targetKey right)
 
@@ -495,6 +478,7 @@ keepIf isKeepable dict =
         helper key value list =
             if isKeepable key value then
                 ( key, value ) :: list
+
             else
                 list
     in
@@ -509,6 +493,7 @@ dropIf shouldDrop dict =
         helper key value list =
             if shouldDrop key value then
                 list
+
             else
                 ( key, value ) :: list
     in
@@ -546,6 +531,7 @@ partition predicate dict =
         helper key value ( trues, falses ) =
             if predicate key value then
                 ( ( key, value ) :: trues, falses )
+
             else
                 ( trues, ( key, value ) :: falses )
 

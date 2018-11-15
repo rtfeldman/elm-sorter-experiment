@@ -1,24 +1,11 @@
-module Sort.Set
-    exposing
-        ( Set
-        , dropIf
-        , empty
-        , eq
-        , foldl
-        , foldr
-        , fromList
-        , insert
-        , isEmpty
-        , keepIf
-        , map
-        , memberOf
-        , partition
-        , remove
-        , singleton
-        , size
-        , toList
-        , union
-        )
+module Sort.Set exposing
+    ( Set
+    , empty, singleton, insert, remove
+    , isEmpty, memberOf, size, eq
+    , union
+    , toList, fromList
+    , map, keepIf, dropIf, foldl, foldr, partition
+    )
 
 {-| A set of unique values.
 
@@ -85,13 +72,6 @@ empty sorter =
 -}
 eq : Set a -> Set a -> Bool
 eq (Set first) (Set second) =
-    Dict.eq first second
-
-
-{-| Check if two sets are equal
--}
-eq : Set a -> Set a -> Bool
-eq (Set_elm_builtin first) (Set_elm_builtin second) =
     Dict.eq first second
 
 
