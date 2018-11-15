@@ -88,6 +88,13 @@ eq (Set first) (Set second) =
     Dict.eq first second
 
 
+{-| Check if two sets are equal
+-}
+eq : Set a -> Set a -> Bool
+eq (Set_elm_builtin first) (Set_elm_builtin second) =
+    Dict.eq first second
+
+
 {-| Create a set with one value.
 -}
 singleton : Sorter a -> a -> Set a
