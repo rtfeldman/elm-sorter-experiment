@@ -3,7 +3,7 @@
     "name": "rtfeldman/elm-sorter-experiment",
     "summary": "Experimental Sorter package",
     "license": "BSD-3-Clause",
-    "version": "2.1.0",
+    "version": "2.1.1",
     "exposed-modules": [
         "Sort",
         "Sort.Dict",
