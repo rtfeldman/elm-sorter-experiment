@@ -75,6 +75,18 @@ tests =
                 , test "get 2" <| \() -> Expect.equal Nothing (Dict.get "Spike" animals)
                 , test "size of empty dictionary" <| \() -> Expect.equal 0 (Dict.size (Dict.empty Sort.increasing))
                 , test "size of example dictionary" <| \() -> Expect.equal 2 (Dict.size animals)
+                , test "eq disregards order elements inserted" <| \() ->
+                    let
+                        elements =
+                            [1, 2, 3, 4] |> List.map (\i -> (i, ()))
+
+                        forward =
+                            Dict.fromList Sort.increasing elements
+
+                        backward =
+                            Dict.fromList Sort.increasing (List.reverse elements)
+                    in
+                    Expect.equal (Dict.eq forward backward) True
                 ]
 
         combineTests =
