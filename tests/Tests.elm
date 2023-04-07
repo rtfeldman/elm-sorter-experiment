@@ -24,8 +24,7 @@ pairRange =
 
 fuzzPairs : Fuzzer (List ( Int, Int ))
 fuzzPairs =
-    ( pairRange, pairRange )
-        |> Fuzz.tuple
+    Fuzz.pair pairRange pairRange
         |> Fuzz.list
 
 
@@ -53,11 +52,11 @@ tests =
                     (List.range 1 100
                         |> List.map
                             (\n ->
-                                test ("of size " ++ toString n) <|
+                                test ("of size " ++ String.fromInt n) <|
                                     \() ->
                                         let
                                             list =
-                                                List.range 1 n |> List.indexedMap (,)
+                                                List.range 1 n |> List.indexedMap Tuple.pair
 
                                             dict =
                                                 Dict.fromList Sort.increasing list
@@ -89,9 +88,9 @@ tests =
         transformTests =
             describe "transform Tests"
                 [ test "filter" <| \() -> Expect.equal (Dict.singleton Sort.alphabetical "Tom" "cat") (Dict.keepIf (\k v -> k == "Tom") animals)
-                , test "filter (numbers)" <| \() -> Expect.equal [ 2, 4, 6, 8, 10 ] (List.range 1 10 |> List.indexedMap (,) |> Dict.fromList Sort.increasing |> Dict.keepIf (\_ v -> v % 2 == 0) |> Dict.values)
+                , test "filter (numbers)" <| \() -> Expect.equal [ 2, 4, 6, 8, 10 ] (List.range 1 10 |> List.indexedMap Tuple.pair |> Dict.fromList Sort.increasing |> Dict.keepIf (\_ v -> Basics.remainderBy 2 v == 0) |> Dict.values)
                 , test "partition" <| \() -> Expect.equal ( Dict.singleton Sort.alphabetical "Tom" "cat", Dict.singleton Sort.alphabetical "Jerry" "mouse" ) (Dict.partition (\k v -> k == "Tom") animals)
-                , test "partition (numbers)" <| \() -> Expect.equal ( [ 2, 4, 6, 8, 10 ], [ 1, 3, 5, 7, 9 ] ) (List.range 1 10 |> List.indexedMap (,) |> Dict.fromList Sort.increasing |> Dict.partition (\_ v -> v % 2 == 0) |> (\( a, b ) -> ( Dict.values a, Dict.values b )))
+                , test "partition (numbers)" <| \() -> Expect.equal ( [ 2, 4, 6, 8, 10 ], [ 1, 3, 5, 7, 9 ] ) (List.range 1 10 |> List.indexedMap Tuple.pair |> Dict.fromList Sort.increasing |> Dict.partition (\_ v -> Basics.remainderBy 2 v == 0) |> (\( a, b ) -> ( Dict.values a, Dict.values b )))
                 ]
 
         mergeTests =
