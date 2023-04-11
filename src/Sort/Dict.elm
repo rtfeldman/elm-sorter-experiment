@@ -80,15 +80,7 @@ empty sorter =
 -}
 eq : Dict k v -> Dict k v -> Bool
 eq first second =
-    case ( first, second ) of
-        ( Leaf _, Leaf _ ) ->
-            True
-
-        ( Node _ _ _ fValue fLeft fRight, Node _ _ _ sValue sLeft sRight ) ->
-            fValue == sValue && eq fLeft sLeft && eq fRight sRight
-
-        _ ->
-            False
+    toList first == toList second
 
 
 {-| Determine if a dictionary is empty.
